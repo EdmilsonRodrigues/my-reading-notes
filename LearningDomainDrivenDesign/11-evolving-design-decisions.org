@@ -1,0 +1,257 @@
+#+title: Evolving Design Decisions
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Changes in Domains
+
+In [[./02-discovering-domain-knowledge][Chapter 02]], we've learned the three types of core business subdomains and how they are different from one another.
+
++ Core: Activities the company is performing differently from its competitors to gain a competitive advantage.
++ Supporting: Things the company is doing differently from its competitors, but that do not provide a competitive edge.
++ Generic: Things all companies do the same.
+
+In the previous chapters, you saw that the type of subdomain at play affects strategic and tactical decisions:
+
++ How to design the bounded contexts' boundaries
++ How to orchestrate integration between two contexts
++ Which design patterns to use to accomodate the complexity of the business logic.
+
+
+When the domains change, some changes are needed. When these changes happen?
+
+** Core to Generic
+
+Imagine a company, such as BuyIT, that has implemented a order delivery solution.
+
+If another company, DeliverIT, creates a new disrupting the delivery industry, what
+first was a differential for BuyIT has now be commoditized, and, as so, what was a
+core subdomain, becomes a generic one.
+
+** Generic to Core
+
+Now, if, for example, BuyIT has inventory management solution from a third party, but
+the complexity of the domain is growing, and the solution is not good anymore.
+
+BuyIT decides to create its own solution in-house, turning a generic subdomain to a core one.
+
+** Supporting to Generic
+
+If BuyIT has a very simple CRUD interface, but an open source alternative became available
+to use, it would be better to use the open source one instead of the in-house, and, by
+this, the supporting subdomain become s Generic one.
+
+** Supporting to Core
+
+A supporting subdomain can also become a core one, if, for example, a simple CRUD interface
+starts to gain more and more complexity.
+
+** Core to Supporting
+
+This can happen, for example, if a core subdomain has not its complexity justified by
+the profit it generates, it can become a Supporting one.
+
+** Generic to Supporting
+
+As well as turning a core subdomain into a supporting one, if the difficulty of
+integrating a third party solution isn't justified, it can become a simple supporting
+subdomain instead.
+
+#+BEGIN_COMMENT
+Create here the three points diagram
+#+END_COMMENT
+
+* Strategic Design Concerns
+
+A change in a subdomain type directly affects its bounded context and, consequently,
+corresponding strategic design decisions.
+
+These design decisions vary from complexity, team assignment, integration level, etc.
+
+* Tactical Design Concerns
+
+One of the more important changes that will happen when a domain change, is the tactical
+design. This calls the needs for reconsidering the modelling of the business logic,
+migrating from one design pattern to another.
+
+** Transaction Script to Active Record
+
+Look for the complicated data structures and encapsulate them in active record objects.
+
+Instead of accessing the database directly, use active records to abstract its model and
+structure.
+
+** Active Record to Domain Model
+
+Start by identifying value objects, and segragating them and put the related business
+logic on them.
+
+Next, analyze the data structures and look for transactional boundaries. A way of doing it
+is setting all setters of all active records to private, and wait for the compilation to
+fail. Then, refactor the boundaries of the active records.
+
+When all the state modifying business logic is moves inside the boundaries of the
+corresponding objects, examine what hierarchies are needed to ensure strongly consistent
+checking of business rules and invariants. Those are good candidates for aggregates.
+
+Finally, for each aggregate, identify its root, or the entry point for its public interface.
+
+Make the methods of all the other internal objects in the aggregate private and only
+callable from within the aggregate.
+
+** Domain Model to Event-Sourced Domain Model
+
+It's relatively simple here, just model the domain events to represent the aggregate's
+lifecycle.
+
+The most challenging aspect of refactoring a domain model into an event sourced domain
+model is the history of the existing aggregates. You will need to either generate the
+past events, ot use model migration events.
+
+*** Generating Past Transitions
+This approach entails generating an approximate stream of events for each aggregate so
+that the stream of events can be projected into the same state representation as in the
+original implementation.
+
+For example, a state based representation like this:
+
+| lead-in | first-name | last-name | phone_number | status    | last-contacted-on        | order-placed-on          | converted-on             | followup-om |
+|---------+------------+-----------+--------------+-----------+--------------------------+--------------------------+--------------------------+-------------|
+|      12 | Shauna     | Mercia    |      55-4753 | converted | 2020-05-27T 12:02:12.51Z | 2020-05-27T 12:02:12.51Z | 2020-05-27T 12:02:12.51Z | null        |
+
+We can assume, for example, the following set of events:
+#+BEGIN_SRC json
+      {
+        "lead-id": 12,
+        "event-id": 0,
+        "event-type": "lead-initialized",
+        "first-name": "Shauna",
+        "last-name": "Mercia",
+        "phone-number": "555-4753"
+      },
+      {
+        "lead-id": 12,
+        "event-id": 1,
+        "event-type": "contacted",
+        "timestamp": "2020-05-27T12:02:12.51Z"
+      },
+      {
+        "lead-id": 12,
+        "event-id": 2,
+        "event-type": "order-submitted",
+        "payment-deadline": "2020-05-30T12:02:12.51Z",
+        "timestamp": "2020-05-27T12:02:12.51Z"
+      },
+      {
+        "lead-id": 12,
+        "event-id": 3,
+        "event-type": "payment-confirmed",
+        "status": "converted",
+        "timestamp": "2020-05-27T12:38:44.12Z"
+      }
+#+END_SRC
+
+*** Modeling Migration Events
+The alternative approach is to acknowledge the lack of knowledge about past events and
+explicitly model it as an event. Instead of recovering the events, define a migration
+event and use it to initialize the event streams
+
+#+BEGIN_SRC json
+      {
+        "lead-id": 12,
+        "event-id": 0,
+        "event-type": "migrated-from-legacy",
+        "first-name": "Shauna",
+        "last-name": "Mercia",
+        "phone-number": "555-4753",
+        "status": "converted",
+        "last-contacted-on": "2020-05-27T12:02:12.51Z",
+        "order-placed-on": "2020-05-27T12:02:12.51Z",
+        "converted-on": "2020-05-27T12:38:44.12Z",
+        "followup-on": null
+      }
+#+END_SRC
+
+* Organization Changes
+
+Another type of change that can affect a system's design is a change in the organization
+itself.
+
+When the company grows, what used to be a team taking care of 5 subdomains can become two
+teams, one with 2 and one with 3 subdomains. This can change the structure of teams in
+many ways.
+
+** Partnership to Customer-Supplier
+
+If there is a change as moving one team to another development center, the communication
+can be damaged, making a partnership pattern become a customer-supply one.
+
+** Customer-Suplier to Separate Ways
+
+Sometimes the communication is so damaged that even the communication required to make
+a customer-supplier pattern can be expensive enough to be preferreable to each team
+develop the solution of the other team internally.
+
+
+* Domain Knowledge
+
+As the domain knowledge of the subdomains are continuously evolving, the domain modelling
+is something that is in continuous change, and the gain of domain knowledge can make the
+modelling to change, as more edge cases, and complexity is added. It also can be lost,
+and this is something we need to actively attack.
+
+From a strategic design, it's a useful heuristic to design the bounded contexts' boundaries
+according to the level of domain knowledge. Therefore, when domain logic is unclear and
+changes often, it makes sense to design the bounded contexts with broader boundaries. Then,
+as domain knowledge is discovered over time, and changes to the business logic stabilize,
+those can be remodelled with narrower boundaries, or *microservices*.
+
+
+* Growth
+
+Growth is a sign of a healthy system. When new functionality is continuously added, it's a
+sign that the system is successful. But growth comes with a dark side: as the project grows
+its codebase can grow into a big ball of mud.
+
+The big ball of mud is created when we continuously grow the system's functionality without
+re-evaluating its design decision. It's crucial to examine the effects of growth on design
+decisions, especially since many *domain-driven design* tools are all about setting boundaries:
++ Subdomains
++ Bounded Contexts
++ Value Objects
++ Aggregates
+
+** Subdomains
+As the business domain grows, the subdomains' boundaries can become even more blurred, making it
+harder to identify cases of a subdomain spanning multiple, finer-grained subdomains.
+
+One useful heuristic to follow is the coherent use cases, where we try to identify sets of use
+cases working on the same data. For example, we have a Case Routing (core subdomain), that, with
+growth, earns a Intent Analysis case. This can be split up into a generic subdomain.
+
+Identifying inner subdomains that can be extracted and made explicit is especially important for
+core subdomains. We should always aim to distill core subdomains as much as possible from all others
+so that we can invest our effort where it matters most from a business strategy perspective.
+
+** Bounded Contexts
+
+The bounded contexts pattern allows us to use different models of the business domain. Instead of
+building a "Jack of All Trades, Master of None" model, we can build multiple models, each focused on
+solving a specific problem.
+
+As a project evolves, it's not uncommon for the bounded contexts to lose their focus and accumulate
+logic related to different problems. It's crucial to revisit the bounded contexts' boundaries from time
+to time, trying to extract bounded contexts that are laser focused at solving specific problems.
+
+Growth also can make existing implicit design issues explicit. If bounded contexts become increasingly
+"chatty" over time, unable to complete any operation without calling another bounded context. That can be
+a strong signal of an inefficient model, that can be addressed by redesigning the bounded context's
+boundaries to increase their autonomy.
+
+** Aggregates
+
+It's common, when a system grow, to distribute the new functionalities among the existing aggregates, without
+revisiting the principles of: *Always keep the aggregates as small as possible*.
+
+Extracting business functionality into a dedicated aggregate not only simplifies the original aggregate, but
+potentially can simplify the bounded context it belongs to. Often, such refacctoring uncovers an additional
+hidden model that, onde made explicit, should be extracted into a different bounded context.
+

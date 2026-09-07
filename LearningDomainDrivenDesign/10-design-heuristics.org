@@ -1,0 +1,153 @@
+#+title: Design Heuristics
+#+author: Edmilson Monteiro Rodrigues Neto
+
+This chapter will be used to bridge the first two parts of the book.
+
+* Heuristic
+
+A heuristic is a rule, that is not absolute, but good enough to be
+used in most part of the problems to make a decision.
+
+Taylor Law remember me this.
+
+* Bounded Contexts
+
+As you will recall from [[./03-managing-complexity.org][chapter 03]]: Both wide and narrow boundaries
+could fit the definition of a valid bounded context encompassing a
+consistent ubiquitous language.
+
+But, still, what is the optimal size of a bounded context?
+
+Should we always strive for the smallest possible bounded context?
+
+#+BEGIN_QUOTE
+There are many useful and revealing heuristics for defining the
+boundaries of a service.
+
+Size is one of the least useful.
+#+END_QUOTE
+
+Rather than making the model a function of the desired size (size as
+parameter).
+It's more effective do the opposite: Treat the bounded context size as
+a function of the model.
+
+Changes that invalidate the bounded contexts' boundaries typically occur
+when the business domain is not well known or the business requirements are
+continually changing.
+
+As you learned in [[./01-analysing-business-domains.org][Chapter 01]], both volatility and uncertainty are the
+properties of core subdomains, especially at the early stages of implementation.
+
+We can use it as a heuristic for designing bounded context boundaries.
+
+Broad context boundaries are safer, as it is cheaper to refactor logical boundaries
+than physical ones. Hence, when designing bounded contexts, start with wider
+boundaries.
+
+In Chapters [[./05-implementing-simple-business-logic.org][5]], [[./06-tackling-complex-business-logic.org][6]], and [[./07-modeling-the-dimension-of-time.org][7]], where we discussed business logic in detail, you learned
+four different ways to model business logic: /The transcription script/, /active record/,
+/domain model/, and /event-sourced domain model/ patterns.
+
+Both the *transaction script* and *active record*, patterns are better suited for
+subdomains with simple business logic:
+- Supporting subdomains
+- Integrating a third-party solution for a generic subdomain
+- etc.
+
+The difference between the two patterns is the complexity of the data structures.
+
+The *transaction script* pattern can be used for *simple data structures*, while the
+*active record* pattern helps to encapsulate the mapping of *complex data structures*
+to the underlying database.
+
+The *domain model* and its variant, the *event-sourced domain model*, lend themselves
+to subdomains that have complex business logic rules: *core subdomains*.
+
+Core subdomains that lead with monetary transactions, are obligated by law to provide an
+audit log, or require deep analytics of the system's behavior are better addressed by the
+event-sourced domain model.
+
+With all this in mind, an effective heuristic for choosing the appropriate business logic
+implementation pattern is to ask the following questions:
+
+1. Does the subdomain track money or other monetary transactions or have to provide a consis-
+   tent audit log, or is deep analysis of its behavior required by the business? If so, use
+   the event-sourced domain model. Otherwise, go to the one below
+2. Is the subdomains' business logic complex? If so, implement a domain model. Otherwise, see below.
+3. Does the subdomain include complex data structures? If so, implement a domain model.
+   Otherwise, see below.
+4. Implements a transaction script.
+
+Since there is a strong relationship between a subdomain's complexity and its type, we can visualize
+the heuristics using a domain-driven decision tree.
+
+#+BEGIN_COMMENT
+IMPLEMENTAR AQUI ÁRVORE DE DECISÃO
+#+END_COMMENT
+
+* Architectural Patterns
+
+In [[./08-architectural-patterns.org][Chapter 8]], you learned about three architectural patterns: /layered architecture/, /ports & adapters/,
+and CQRS.
+
+Knowing the intended business logic implementation pattern makes choosing an architectural pattern
+straightforward.
+
++ The event-sourced domain model requires CQRS.
++ The domain model requires the ports & adapters architecture.
++ The Active Record pattern is best accompanied by a layered architecture with the additional application (service) layer.
++ The transaction script pattern can be implemented with a minimal layered architecture, consisting on only 3 layers.
+
+The only exception for the preceding heuristics is the CQRS pattern. CQRS can be beneficial not only for event-sourced
+domain model, but also for any other pattern if the subdomain requires representing its data in multiple persistent models.
+
+#+BEGIN_COMMENT
+IMPLEMENTAR AQUI ÁRVORE DE DECISÃO
+#+END_COMMENT
+
+* Testing Strategy
+
+The knowledge of both bounded context and architectural pattern can be used as a heuristic for choosing a testing strategy
+for the codebase.
+
++ Testing Pyramid (most unit, less end-to-end)
++ Testing Diamond (most integration, less unit and end-to-end)
++ Reversed Testing Pyramid (most end-to-end, less unit)
+
+** Testing Pyramid
+The classic, emphasizes unit tests, fewer end-to-end. Both variants of the *domain model* are best addressed with the test pyramid.
+Aggregates and value-objects make perfect units for effectively testing the business rules.
+
+** Testing Diamond
+The testing diamond focuses the most on integration tests. When the active record pattern is used, the system's business logic is,
+by definition, spread across both the service and the business logic layers. Therefore, to focus on integrating the two layers, the
+testing diamond is the more efficient choice.
+
+** Reversed Testing Pyramid
+The reversed testing pyramid attributes most attention to end-to-end tests: verifying the application's workflow from beginning to end.
+Such an approach best fits codebases implementing the transaction script pattern: The business logic is simple and the number of layers
+is minimal, making it more effective to verify the end-to-end flow of the system.
+
+#+BEGIN_COMMENT
+IMPLEMENTAR AQUI ÁRVORE DE DECISÃO
+#+END_COMMENT
+
+* Tactical Design Decision Tree
+
+#+BEGIN_COMMENT
+IMPLEMENTAR AQUI ÁRVORE DE DECISÃO
+#+END_COMMENT
+
+* Exercises
+
+1. 
+
+2. 
+
+3. 
+
+4. 
+
+5. 
+

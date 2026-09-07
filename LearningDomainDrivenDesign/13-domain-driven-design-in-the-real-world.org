@@ -1,0 +1,255 @@
+#+title: Domain Driven Design in the Real World
+#+author: Edmilson Monteiro Rodrigues Neto
+
+In real life, you will probably not have a clean slate to apply DDD where everyone is familiar with the methodology
+and tactical decisions in orther to align system design to the business domain.
+
+In most cases we have a system that has already proven it is able to provide value, that will be refactored into DDD,
+so we will dive in those cases of not a laboratory condition.
+
+* Strategic Analysis
+
+** Understand the Business Domain
+
+First, we identify the company's business domain:
++ What is the organization's business domain?
++ Who are its customers?
++ What service, or value, does the organization provide to customers?
++ What companies or products is the organization competing with?
+
+Next, we "zoom in" to the daomin and look for the business building blocks the organization employs to achieve its
+high-level goals: the subdomains.
+
+A good initial heuristic is the company's org chart: Their departments and other organizational units.
+
+
+*** Core subdomains
+
+To identify them, look for what differentiates it from its competitors:
++ Does the company have a "secret sauce" that its competitors lack? For example, intellectual property, such as
+  patents or algorithms designed in-house?
++ Keep in mind that the competitive advantage, and thus the core subdomains, are not necessarily technical.
+  Does it have any nontechnical competitive advantage? Like being able to hire top-level personnel, produce unique
+  artistic design, and so on?
+
+Another powerful yet unfortunate heuristic for core subdomains is identify the worst-designed software components
+(the big balls of mud). If they cannot be substituted to a generic subdomain, it probably is a core subdomain.
+
+*** Generic subdomains
+
+To identify generic subdomains, look for off-the-shelf solutions, subscription services, or integration of open
+source software.
+
+*** Supporting subdomains
+
+For supporting subdomains, look for the remaining software components that cannot be replaced by ready-made solutions,
+yet do not provide competitive advantage.
+
+** Explore the current design
+
+Now, after divided into domains, we look at high level components of the system. Boundaries used to decompose the
+business domain.
+
+The characteristic property to look for is the components' decoupled lifecycle. Even if the subsystems are managed in
+the same source control repository (monorepo) or if all the components reside in a single monolithic codebase, check
+which can be evolved, tested, and deployed independently from the others.
+
+*** Evaluate the tactical design
+
+For each high-level component, check which business subdomains it contains and what technical design decisions were
+taken:
+
++ What patterns are used to implement the business logic, and define the component's architecture?
++ Does the solution fit the complexity of the problem?
++ Are there areas where more elaborate design patterns are needed?
++ Conversely, are there any subdomains where it«s possible to cut corners or use existing, off-the-shelf solutions?
+
+
+*** Evaluate the strategic design 
+
+Use the knowledge of the high-level components to chart the current design's context map, as though these high-level
+components were bounded contexts.
+
+Identify and track the relationships between the components in terms of bounded context integration patterns.
+
+Finally, analyze the resultant context map and evaluate the architecture from a DDD perspective.
+
+Look for suboptimal strategic decisions such as:
+
++ Multiple teams working on the same high-level component
++ Duplicate implementations of core subdomains
++ Implementation of a core subdomain by an outsourced company
++ Friction because of frequently failing integration
++ Awkward models spreading from external services and legacy systems
+
+Look for lost domain knowledge.
+
+If there is a lot of lost of domain knowledge, facilitate Event Storming sessions to find them out.
+
+* Modernization Strategy
+
+The "big rewrite" endeavors, in which the engineers are trying to rewrite the system from scratch, are rarely successful.
+
+A safer approach to improving the design of existing systems is to think big, but start small..
+
+*Not all of a big system will be well designed.*
+
+Because of this, we must strategically decide where to invest in terms of modernization efforts.
+
+So, before crating physical boundaries, as need in order to create bounded contexts, first, ensure that there are logical
+boundaries aligned with the subdomain's boundaries.
+
+This kind of adjustment is a relatively safe form of refactoring, since it's just reorganization, without touching in the
+business logic.
+
+But, of course, you need to observe for dynamic imports, etc.
+
+In addition, keep track of the subdomains' business logic implemented in different codebases:
++ Stored procedures in a database
++ Serverless Functions
++ Main API
++ Etc.
+
+Remember to introduce these boundaries in the different codebases as well.
+
+** Strategic Modernization
+
+As we don't want to have too small not too big bounded contexts, observe first which segregations would provide more
+gain in value.
+
+Ask yourself:
++ Are multiple teams working on the same codebase?
+  + If so, decouple the development lifecycles by defining bounded contexts for each team.
++ Are conflicting models being used by the different components? If so, relocate the conflicting models into separate
+  bounded contexts.
+
+When the minimum required bounded contexts are in place, examine the relationships and integration patterns
+between them.
+
+See how teams working on different bounded contexts communicate, specially for shared-kernel or ad-hoc communications.
+
+Remember which  problema the different context integration patterns can address.
+
++ *Customer-Supplier Relationships*
+  Look for components designed for a partnership relationship where partneership is no longer sustainable.
+
+  Refactor to the appropriate type of customer-supplier relationship (conformist, anticorruption layer or open host service).
+
+  + *AntiCorrupution Layer*
+    Useful for protecting bounded contexts from legacy systems, especially, when legacy systems are using inefficient models.
+
+    Another common use case is to protect a bounded context from frequent changes in the public interfaces of an upstream
+    service it uses.
+
+  + *Open-Host Service*
+    If changes in the implementation details of one component often ripple through the system and affect its consumers, consider
+    making it an open host service
+
++ Separate Ways
+  Especially in Large Organizations you may encounter friction among engineering teams resulting from having to collaborate
+  and co-evolve a shared functionality.
+
+
+** Tactical Modernization
+
+First, from a tactical standpoint, look for the most "painful" mismatches in business value and implementation strategies, such as
+core subdomains implementing patterns that don't match the complexity of the model, e.g.: transactional script or active records.
+
+** Cultivate a Ubiquitous Language
+
+A pre-requisite to the successful modernization of a design is the domain language and effective model of the business domain.
+
+Use strategies such as EventStorming to gathering the knowledge of the codebase and creating the ubiquitous language.
+
+After gathering the domain knowledge and its model, decide which business logic implementation patterns best suit the business
+functionality in question. It is recommended to use heuristics to make these first decisions.
+
+Now, you have to decide which modernization strategy you will choose: Gradually replacing whole components of the system,
+or gradually refactoring the existing solution.
+
+*** Strangler Pattern
+Strangler fig pattern is named referencing the Strangler Fig behaviour.
+
+The idea is to create a new bounded context, the strangler, use it to implement new requirements, and gradually migrate the legacy
+context's functionality into it.
+
+Eventually, all functionality is migrated to the new boundeed context, the strangler, and this leads to the death of the legacy codebase,
+
+Usually the strangler pattern is used in tandem with the facade pattern: a thin abstraction layer that acts as the public interface and is
+in charge of forwarding the requests to processing either by the legacy or the modernizes bounded context.
+
+When the legacy system dies, the facade is removed.
+
+*** Refactoring tactical design decisions
+
+Small incremental steps are sager than a bif rewrite. Therefore, don't refactor a transaction script or active record straight to an
+event-sourced domain model. Instead, take the intermediate step of designing state-based aggregates.
+
+Second, following the same reasoning of taking small incremental steps, refactoring to a domain model doesn't have to be an atomic
+change. Instead, you can gradually introduce the elements of the domain model pattern.
+
+Finally, do not forget to protect the new code from the old model with an ACL.
+
+* Pragmatic Domain Driven Design
+
+Remember always: DDD is about letting domain driver software design decisions, not the tools you use. Using domain model or not
+will not be what makes you do DDD.
+
+* Selling Domain Driven Design
+
+Selling the DDD is essential, as without management support, it is impossible to implement such a broad and product-coupled
+mehodology.
+
+So, if the management is not into it, you can still implement DDD, using other techniques.
+
+** Undercover Domain Driver Design
+
+Make DDD part of your professional toolbox instead of an organizational strategy.
+
+*** Ubiquitous language
+
+Listen carefully to the language the stakeholders use when they speak about the business domain.
+
+Gently steer the terminology away from technical jargon and toward its business meaning.
+
+Look for inconsistent terms and ask for clarifications.
+
+Alsoo, communicate with domain experts as much as possible.
+
+Speak with the domain experts about the business domain.
+
+Try using their language. Look for difficulties in understanding and ask for clarifications.
+
+Most importantly, use the ubiquitous language in your code and all project-related communication.
+
+This will take time to catch on, but be patient.
+
+*** Bounded contexts
+
+When exploring possible decomposition options, resolve to the principles behind what the bounded context pattern
+is based on:
+
++ Why is it better to design problem-oriented models instead of a single model for all use cases?
++ Why can't a bounded context host conflicting models?
++ Why is it a bad idea for multiple teams to work on the same codebase?
+
+Use the same reasoning for bounded context integration patterns.
+
+*** Tactical Design Decisions
+
+When discussing tactical design patterns, don't appeal to authority. Instead, appeal to logic:
+
++ Why are explicit transactional boundary important?
++ Why can't a database transaction modify more than one instance of an aggregate?
++ Why can't an aggregate's state be modified directly by an external component?
++ Why can't we offload some of the aggregate's functionality to a stored procedure?
++ Why should we strive for small aggregate boudaries?
++ Why, instead of evnt sourcing, can't we just write events to a logfile?
+
+*** Event sourced domain model
+
+Despite its many advantages, event sourcing sounds too radical for many people. As with everything we've
+discussed in this book, the soluion is to let the business domain drive this decision.
+
+Talk to domain experts. Show them the state- and event-based models. Explain the differences and the advantages offered
+by event sourcing, and let them advocate for it themselves.

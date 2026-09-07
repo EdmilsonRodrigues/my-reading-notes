@@ -1,0 +1,202 @@
+#+title: Discovering Domain Knowledge
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Business Problems
+
+The software systems are solutions to business problems. A business problem can be challanges
+associated with optimizing workflows and processes, minimizing manual labor, managing resources,
+supporting decisions, managing data, and so on.
+
+Business problems appear both at the business domain and subdomains levels.
+
+Subdomains are finer-grained problem domains whose goal is to provide solutions for specific
+business capabilities.
+
+* Knowledge Discovery
+
+To design an effective software solution, we have to grasp at least the basic knowledge of the
+business domain. This knowledge belongs to the domain experts.
+
+By no means should we, nor can we, become domain experts. That said, it's crucial for us to
+understand domain experts and use the same business terminology they use.
+
+To be effective, the software has to mimic the domain experts' mental model about the problem.
+
+Effective  knowledge sharing between domain experts and software engineers requires effective
+communication.
+
+* Communication
+
+It's safe to say that almost all software projects require the collaboration of stakeholders in
+different roles: domain experts, product owners, engineers, UI and UX designers, project
+managers, testers, analysts, and others.
+
+As in any collaborative effort, the outcome depends on how well all those parties can work together.
+Research into why software project fail has shown that effective communication is essential for
+knowledge sharing and project success.
+
+Usually, the business people and the engineering team do not communicate, and information from the
+business is "translated" into an engineer-friendly form known as /analysis model/, and with things
+such as UML models. Although this is better than nothing, in any translation, information is lost.
+
+Also, the business needs change more quickly than the documentation changes. This makes that the
+domain knowledge of the engineering team easily become distorted, or outdated, leading to a failed
+software project.
+
+Domain-Driven Design proposes a better way to get the knowledge from domain experts to software
+engineers: by using a *ubiquitous language*.
+
+* What is a ubiquitous language?
+
+Using a ubiquitous language is the cornerstone practive of domain-driven design.
+
+The idea is simple: All parties need to speak the same language.
+
+The traditional software development lifecycle implies the following translations:
+
++ Domain knowledge => Analysis Model
++ Analysis Model => Requirements
++ Requirements => System Design
++ System Designs => Source Code
+
+Instead of continuously translating domain knowledge, domain-driven design calls for
+cultivating a single language for describing the business domain: The ubiquitous language.
+
+All project-related stakeholders (software engineers, product owners, domain experts, UI/UX
+designers, etc.) should use the ubiquitous language when describing the business domain.
+
+* Language of the Business
+
+The ubiquitous language is the language of the business.
+
+As such, it should consist of business domain-related terms only, no technical jargon allowed.
+
+** Scenarious
+
+Let's say we are working on an advertising campaign management system.
+
++ An advertising campaign can display different creative materials.
++ A campaign can be published only if at least one of its placement is active.
++ Sales commissions are accounted for after transactions are approved.
+
+All of these statements are formulated in the language of the business.
+They are using the ubiquitous language.
+
+Now, look at these technical ones:
+
++ The advertisement iframe displays an HTML file.
++ A campaign can be published only if it has at least one associated record in the active-placements
+  table.
++ Sales commissions are based on correlated records from the transactions and approved-sales tables.
+
+If the engineers are only used to the second type of language, they will not be able to communicate
+with the domain experts, since they will not understand those.
+
+** Consistency
+
+The ubiquitous language must be precise and consistent. It should eliminate the need for assumptions and
+should make the business domain's logic explicit.
+
+Since ambiguity hinders communication, each term of the ubiquitous language should have one and only one
+meaning.
+
+*** Ambiguous terms
+
+Let's say that in some business domain, the term /policy/ has multiple meanings: it can mean a regulatory
+rule or an insurance contract. The Ubiquitous language demands a single meaning for each term, so "policy"
+should be modeled explicitly using the two terms: /regulatory rule/ and /insurance contract/.
+
+*** Synonymous terms
+
+Two terms cannot be used interchangeably in a ubiquitous language.
+
+For example, we cannot have /user/, /visitor/, /account/, etc, meaning the same thing. Each term must have
+only one meaning, and one meaning must have only one term associated to it.
+
+* Model of the Business Domain
+
+** What Is a Model?
+
+A model is not a copy of the real world, but a human construct that helps us make sense of real-world systems.
+
+An example is a map. A map is a model of a location, and it will show the information needed for its specific
+purpose. It will never show all the details, but only the required for its use-case.
+
+** Effective Modelling
+
+All models have a purpose and an effective model contains only the details needed to fulfill its purpose.
+
+As the statistician George Box put it:
+
+#+BEGIN_QUOTE George Box
+All models are wrong, but some are useful.
+#+END_QUOTE
+
+A model is, in essence, an abstraction. An inefficient abstraction removes necessary information or produces noise
+by leaving unneeded info.
+
+** Modeling the Business Domain
+
+When cultivating a ubiquitous language, we are effectively building a model of the business domain.
+
+The ubiquitous language is not supposed to cover every possible detail of the domain, but just the aspects of the
+business domain to make it possible to implement the required system.
+
+The more complex the business domain is, the more important it is for this communication between the engineers and
+the domain experts, since even the slightest misunderstood can generate an implementation prone to severe bugs.
+
+** Continuous Effort
+
+Formulation of a ubiquitous language requires interaction with the domain experts. Only these interactions can uncover
+wrong assumptions, inaccuracies, etc.
+
+All stakeholders should consistently use the ubiquitous language in all project-related communications to spread
+knowledge about and foster a shared understanding of the business domain.
+
+It should be used everywhere: Meetings, requirements, tests, documentation, and even the source code itself.
+
+Most importantly, it should be continuously used and evolved.
+
+** Tools
+
+There are tools and technologies that can alleviate the process of capturing and managing a ubiquitous language.
+
+For example, a wiki can be used as a glossary to capture and document the ubiquitous language.
+
+It's important to make glossary maintenance a shared effort. If a new term is added or one is changed, any member of the
+team can change it, this helps decentralization.
+
+Though useful, glossaries are better for nouns. But for business rules, Gherkin tests are better tools.
+
+Automated tests written in the /Gherkin language/ are not only great tools for capturing the ubiquitous language, but also
+act as an additional tool for bridging the gap between domain experts and software engineers.
+
+An example:
+
+#+BEGIN_SRC javascript
+  describe('notify the agent about a new support case', () => {
+      // Given Vicent Jules submits a new support case saying
+      // "I need help configuring AWS Infinidash"
+
+      // When the ticket is assigned to Mr. Wolf
+
+      // Then the agent receives a notification about the new ticket.
+  })
+#+END_SRC
+
+While these tools are useful, they are secondary to the actual use of a ubiquitous language in day-to-day interactions.
+
+** Challanges
+
+Though it looks simple at first look, defining an ubiquitous language is usually a hard process, as the only reliable source
+of information about the business domain is the domain experts, and, it usually is not written in any documentation nor coded
+but live in their minds, and is only accessible through questions.
+
+There may be ambiguities and even white spots in domain experts' own understanding of the business domain, for example, defining
+only the "happy path" scenarios but not consudering edge cases that challange the accepted assumptions. Asking questions about
+the nature of the business domain often makes such implicit conflicts and white spots explicit.
+
+When introducing DDD into a brownfield project, you will notice that there is already a formed language for describing the business
+domain, and that the stakeholders use it. However, they might not be ubiquitous, and thus, need to be changed.
+
+This change is not easy, and patience is the most essential tool.

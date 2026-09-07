@@ -1,0 +1,322 @@
+#+title: Analysing Business Domains
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* What is a Business Domain?
+
+A business domain defines a company's main area of activity.
+
+Examples:
++ FedEx => Courier Delivery
++ Starbucks => Coffee
++ Walmart => Retail Establishment
+
+A company can operate in multiple business domains.
+
+Amazon, for example, provides retail, and cloud computing.
+
+Uber provides rideshare, and food delivery.
+
+Etc.
+
+A company can also change their business domain.
+
+Nokia changed from wood processing, to rubber manufacturing, to telecommunications, and to mobile
+communications.
+
+* What is a Subdomain?
+
+To achieve its business domain's goals and targets, a company has to operate in multiple
+/subdomains/. A subdomain is a fine-grained area of business activity.
+
+The sum of all subdomains of a company, form its business domain.
+
+The subdomains have to interact with each other to achieve the company's goals in its
+business domain.
+
+** Types of Subdomains
+
+Just as a software system comprises various architectural components (databases, frontend
+applications, backend services, etc.) subdomains bear different strategic/business values.
+
+Domain-Driven Design distinguishes between three types of subdomains: core, generic, and
+supporting.
+
+*** Core Subdomains
+
+A /core subdomain/ is what a company does differently from its competitors. This may involve
+inventing new products or services or reducing costs by optimizing existing processes.
+
+For example, Uber initially had /ridesharing/ as the form of transportation as their core
+subdomain. As its competitors caught up, it changed the core subdomain to ways of optimizing,
+such as reducing costs by matching rides heading in the same direction.
+
+**** Complexity
+A core subdomain that is simple to implement can only provide a short-lived competitive advantage.
+
+Therefore, core subdomains are naturally complex.
+
+**** Sources of competitive advantage
+
+It's important to note that core subdomains are not necessarily technical. Not all business problems
+are solved through algorithms and other technical solutions.
+
+Consider, for example, a jewelry maker selling its products online. The online shop is important but
+it's not a core subdomain. The jewelry design is. The company can use an existing off-the-shelf online
+shop engine, but it cannot outsource the design of its jewelry.
+
+
+Core subdomains are also called core domains. But, as they are subdomains, not domains, it would be
+better to always call them *core subdomains*.
+
+*** Generic Subdomains
+
+These are business activities that all companies are performing in the same way.
+
+Like core subdomains, generic subdomains are generally complex and hard to implement, however, do not
+provide any competitive advantage. There is no need for innovation or optimization here: Use battle-
+tested implementations.
+
+For example, the online shop for the jewelry maker above, or a login and authentication feature, etc.
+
+*** Supporting Subdomain
+
+As the name suggests, /supporting subdomains/ support the company's business. However, different from
+generic and core subdomains, supporting subdomains are not complex to implement, nor provide competitive
+advantage.
+
+They are usually ETL operations or CRUD interfaces.
+
+** Comparing Subdomains
+
+*** Competitive advantage
+
+Only core subdomains provide a competitive advantage.
+
+Generic subdomains, by definition, cannot be a source of competitive advantage, and are usually outsourced.
+
+Supporting subdomains have low entry barriers and cannot provice a competitive advantage.
+
+The more complex the problems a company is able to tackle, the more business value it can provide.
+This includes services delivered to costumers, but also making the business more optimized and efficient,
+possibly making it able to provide the same service for a lower price.
+
+*** Complexity
+
+From a more technical perspective, it's important to identify the organization's subdomains, because the
+different types of subdomains, because they have different levels of complexity.
+
+When designing software, we have to choose tools and techniques that accomodate the complexity of the business
+requirements.
+
+Supporting subdomain's business logic is simple. These are basic ETL operation and CRUD interfaces, and the business
+logic is obvious. Often, it doesn't go beyond validating inputs or converting data from one structure to another.
+
+Generic subdomains are much more complicated. These should be a good reason why others have already invested time and
+effort in solving these problems, These solutions are neither simple nor trivial, such as encryption algorithms, or
+authentication mechanisms.
+
+From a knowledge perspective, generic subdomains are things we know that we don't know. These are normally outsourced.
+
+Core subdomains are complex. They should be as hard for competitors to copy as possible. That's why strategically, compa-
+nies are looking to solve complex problems as their core subdomains.
+
+At times, it may be challenging to differentiate between core and supporting subdomains. Complexity is a useful guiding
+principle. Would someone pay for that subdomain on its own, if it was segregated into its own business? If so, it's a
+core subdomain, if not, would it be easier to hack our own implementation, instead of integrating an external one? If so,
+it's a supporting subdomain, else, it's a generic one.
+
+Another way is to differentiate by its complexity. If it's just some CRUD with no much business rules attached to it, it
+is a supporting subdomain, else it is a core one.
+
+*** Volatility
+
+As core subdomains are where the competitive advantage lives, it can change often, since, if the problem can be solved in
+the first attempt, it is not a goof competitive advantage. They are emergent, and are constantly changing, being refined,
+optimized, and its work is never done.
+
+Contrary to the core subdomains, supporting subdomains do not change often. As they do not provide any competitive advantage
+for the company, their evolution provides a minuscule business value, compared with the core subdomains.
+
+Generic subdomains also can change over time, from patches and bug fixes, to entire new solutions.
+
+*** Solution Strategy
+
+Although the core subdomains are the ones that provide the company its ability to compete with other players in the industry,
+the generic and supporting subdomains are also important. All subdomains are required for the company to wotk in its business
+domain. That said, we can leverage the properties of the different types of subdomains to choose implementation strategies to
+implement each type of subdomain in the most efficient manner.
+
+Core subdomains have to be implemented in house. They cannot be bought or adopted, because the competitors would be able to do
+the same.
+
+It is also unwise to outsource the implementation of a core subdomain, as the responsability to maintain them is where the
+business value live.
+
+Since the core subdomains' requirements are in constant change, they should be maintainable and easy to evolve.
+
+Since generic subdomains are hard but already solved problems, it's more cost-effective to buy an off-the-shelf product or adopt
+an open source solution than invest time and effort into implementing a generic subdomain in-house.
+
+Lack of competitive advantage makes it reasonable to avoid implementing supporting subdomains in-house. However, unlike generic
+subdomains, there is no ready-made solution available, so the company must do it in-house, but it can delegate it easily.
+
+Supporting subdomains are a great opportunity to train up-and-coming talent, as there is no need for advanced engineering techniques.
+
+** Identifying Subdomains Boundaries
+
+The subdomains and their types are defined by the company's business strategy: its business domains and how it differentiates itself
+to compete with other companies in the same field. However, it may be hard to identify the subdomains' boundaries.
+
+A good starting point is the company's departments and other organizational units.
+
+For example, an online retail shop might include warehouse, customer service, picking, shipping, quality control, and channel
+management, among others.
+
+These, however, are relatively coarse-grained areas of activity. 
+
+*** Distilling Subdomains
+
+Coarse-grained subdomains are a good starting point, but the devil is in the details. We have to make sure we are not missing
+important information hidden in the intricacies of the business function.
+
+First, take the coarse-grained subdomains, then, try to find the subdivisions of it. 
+
+*** Subdomains as coherent use cases
+
+From a technical perspective, subdomains resemble sets of interrelated, coherent use cases. Such sets of use cases usually
+involve the same actor, the business entities, and they all manipulate a closely related set of data. 
+
+So, always take the usecases that are involved together, and group them in the subdomains.
+
+For core subdomains, we need them as distilled as possible.
+
+Now, for supporting or generic ones, we can relax more in this distillation.
+
+*** Focus on the essentials
+
+Subdomains are a tool that alleviates the process of making software design decisions.
+
+All organizations have quite a few business functionalities that drive their competitive advantage but have nothing to do with
+software. 
+
+When looking for subdomains, it's important to identify business functions that are not related to software, acknowledge them
+as such, and focus on aspects of the business that are relevant to the software system we are working on.
+
+* Domain Analysis Examples
+
+Here are some use cases so we can distill the subdomains:
+
+** Gigmaster
+
+Gigmaster is a ticket sales and distribution company.
+
+Its mobile app analyzes users' music libraries, streaming service accounts, and social media profiles to identify nearby shows
+that its users would be interested in attending.
+
+Gigmaster's users are conscious of their privacy.
+Hence, all users' personal information is encrypted.
+Moreover, to ensure that users' guilty pleasures won't leak out, the company's recommendation algorithm works exclusively on
+anonymized data.
+
+To improve the app's recommendations, a new module was implemented. It allows users to log gigs they attended in the past, even
+if the tickets weren't purcharsed through Gigmaster.
+
+*** Business domain and subdomains
+
+**** Domain
+Ticket Sales
+
+**** Core subdomains
+
++ Recommendation Engine
++ Data Anonymization
++ Mobile App
+
+
+**** Generic Subdomains
++ Encryption
++ Accounting
++ Clearing (Charging)
++ Authentication and authorization
+
+**** Supporting Subdomains
+
++ Integration with music streaming services
++ Integration with social networks
++ Attended-gigs module
+
+
+*** Design Decisions
+
++ The recommendation engine, data anonymization and mobile app must be implemented in-house with
+  advanced engineering tools and techniques.
++ Off-the-shelf or open source solutions should be used for data encryption, accounting, clearing
+  and authentication.
++ Integration with streaming services, social networks and the module for attended gigs can be outsourced.
+
+** BusVNext
+
+BusVNext is a public transportation company.
+
+It aims to provide its customers with bus rides that are comfortable like catching a cab.
+
+The company manages fleets of buses in major cities.
+
+A BusVNext customer can order a ride through the mobile app.
+
+At the scheduled departure time, a nearby bus' route will be adjusted on the fly to pick up the customer
+at the specified departure time.
+
+The company's major challenge was implementing the routing algorithm. Its requirements are a variant of the
+"travelling salesman problem". The routing logic is countinuously adjusted and optimized. 
+
+For example, statistics show the primary reason for canceled rides is the long wait time for a bus to arrive.
+So, the company adjusted the routing algorithm to prioritize fast pickups, even if that means delayed drop-offs.
+
+To optimize the routing even more, BusVNext integrated with third-party providers for traffic conditions and
+real-time alerts.
+
+From time to time, BusVNext issues special discounts, both to attract new customers and to level the demand for
+rides over peak and off-peak hours.
+
+*** Business domain and subdomains
+
+**** Domain
+Public transportation.
+
+**** Core subdomains
+
++ Routing
++ Analysis
++ Mobile app user experience
++ Fleet management
+
+**** Generic subdomains
+
++ Traffic conditions
++ Accounting
++ Billing
++ Authorization
+
+**** Supporting subdomains
+
++ Promotions and discounts
+
+
+*** Design decisions
+
++ The routing algorithm, data analysis, fleet management and app usability have to be implemented
+  in-house, using elaborate technical tools and patterns
++ Implementation of the promotions management module can be outsourced.
++ Identifying traffic conditions, authorizing users, and managing financial records and transactions
+  can be offloaded to external service providers.
+
+
+* Who are the domain experts?
+
+The domain experts are neither the analysts gathering the requirements nor the engineers designing the
+system. Domain experts represent the business. They are the people who identified the business problem in
+the first place, and from whom all business knowledge originates.
+
+They are the either the people coming up with requirements or the software's end users.
+

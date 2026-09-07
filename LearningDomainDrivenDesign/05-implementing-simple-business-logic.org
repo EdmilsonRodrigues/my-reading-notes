@@ -1,0 +1,193 @@
+#+title: Implementing Simple Business Logic
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Transaction Script
+
+In this strategy, we expose procedures in the public interface of the service, and implement these procedures.
+
+Examples:
++ AddItem(string item): int
++ SetPriority(int itemId, int priority): void
++ ListItems(): string[]
++ Assign(int: itemId, int sprintId): void
+
+** Implementation
+
+Each procedure is implemented as a simple, straightforward procedural script.
+It can use a thin abstraction layer for integrating with storage mechanisms, but it is also free to access the
+databases directly.
+
+The only requirement procedures have to fulfill is transactional behavior.
+They must either update state, get state, or both.
+/Each operation should either succeed or fail, but can never result in an invalid state./
+
+** It's Not That Easy!
+
+The transactional pattern seems easy, but it is sometimes underestimated, and for this, misimplemented. Also,
+it is the foundation for the other patterns.
+
+Let's see how someone can fail to implement it.
+
+*** Lack of transactional behavior
+
+The most simple and common way to fail to implement this pattern is the lack of transactional behavior.
+
+See the example:
+
+#+BEGIN_SRC python
+  class LogVisit:
+      ...
+      def execute(user_id: Guid, visited_on: datetime):
+          self._db.execute(
+              "UPDATE Users SET last_visit=? WHERE user_id=?",
+              visited_on,
+              user_id
+          )
+          self._db.execute(
+              "INSERT INTO VisitLog (user_id, visit_date) VALUES (?, ?)",
+              user_id, visited_on
+          )
+#+END_SRC
+
+If any issue occurs after the record in the users table was updated, but before appending the log record
+succeeds, the system will end up in an inconsistent state, with the users table updated, but with no
+visit log.
+
+This can be fixed by introduxinf a proper transaction encompassing both data changes:
+
+#+BEGIN_SRC python
+  class LogVisit:
+      ...
+      def execute(user_id: Guid, visited_on: datetime):
+          with self._db as db:
+              db.execute(
+                  "UPDATE Users SET last_visit=? WHERE user_id=?",
+                  visited_on,
+                  user_id
+              )
+              db.execute(
+                  "INSERT INTO VisitLog (user_id, visit_date) VALUES (?, ?)",
+                  user_id, visited_on
+              )
+#+END_SRC
+
+This is simple enough in relational databases, since their native support of transactions spanning multiple
+records. Things get more complicated when you have to issue multiple updates in a database that doesn't
+support multirecord transactions or multiple storage mechanisms that are impossible to unite in a distributed
+transaction.
+
+*** Distributed Transactions
+
+In distributed systems, sometimes we want to notify the other members, maybe instead of inserting a register
+in VisitLog, just send a message to a visit bus.
+
+This is an antipattern in transactional script, as it is not simple to make this integration, and incurs easily
+in the same error experienced above of transactions.
+
+*** Implicit distributed transactions
+
+The communication between the server and its clients are also distributed transactions.
+
+Imagine a method that will increase in the database the counts of the visitors entry by one.
+
+There will be no actual difference for the client if the procedure failed because the transaction was not
+completed, or if it failed because of a network shortage, or the server failed after the transaction is completed.
+Either way, the client will try again, leading to an inconsistent state.
+
+A first way to solve this, would be making the operation idempotent giving the responsability to the client to
+get the current state and increase it. This will make it able to send how many times it wants this call, because
+it won't change the result in the db.
+
+Other possibility is to use optimistic concurrency control:
+
+Prior to calling the LogVisit operation, the caller needs to read the counter's current value, and pass it to the
+LogVisit as a parameter:
+
+#+BEGIN_SRC python
+  class LogVisit:
+      ...
+      def execute(user_id: Guid, expected_visits: int):
+          self._db.execute(
+              "UPDATE Users SET visits=visits+1 WHERE user_id=? AND visits=?",
+              user_id, expected_visits
+          )
+#+END_SRC
+
+Subsequent executions of LogVisit with the same input parameters won't change the data.
+
+=I prefer this one=
+
+** When to Use Transaction Script
+
+This pattern is well adapted to the most straightforward problem domains.
+
+Good examples for ETL operations, or simple CRUDs. Naturally fit for supporting and generic subdomains, as well as
+for anticorruption layers.
+
+The main advantage of this pattern is its simplicity. It has minimal abstractions, and minimizes the overhead both
+in runtime performance and in understanding the business logic.
+
+However, it is not a good fit as the business logic grows.
+
+The more complex the business logic gets, the more it's prone to duplicate business logic across transactions, and,
+consequently, to result in inconsistent behavior, when the duplication goes out of sync.
+
+As a result, Transaction Script should never be used for core subdomains.
+
+However, for its usecase, it's perfect.
+
+* Active Record
+
+It's also for simple business rules, like the transaction script. However, the business logic operates on more complex
+data structures.
+
+For example, instead of flat records, we can have complicated data structures, such as trees and hierarchies.
+
+** Implementation
+
+Consequently, this pattern uses dedicated objects, known as active records, to represent complicated data structures.
+
+Apart from the data structure, these objects also implement data access methods for CRUD operations.
+
+As a result, the active record objects are coupled to an ORM or some other data access framework.
+
+As in the previous pattern, they system's business logic is organized in a transaction script. The difference between
+the two patterns is that in this case, instead of accessing the database directly, the transaction script manipulates
+active record objects.
+
+#+BEGIN_SRC python
+  class CreateUser:
+      def execute(user_details):
+          with self._db as db:
+              user = User()
+              user.name = user_details.name
+              user.email = user_details.email
+              user.save()
+#+END_SRC
+
+The pattern0s goals it sto encapsulate the complexity of mapping the in-memory object to the database schema.
+
+In addition to being responsible for persistence, the active record objects can contain business logic.
+
+That said, the distinctive feature of an active record object is the separation of data structures and behavior.
+
+Usually, an active record's fields have public getters and setters, that allow external procedures to modify its
+state.
+
+** When to use Active Record
+
+As an active record is just an upgraded transaction script, it must be used only for simple CRUD operations as well,
+with, maybe, input validation or something like this.
+
+This pattern is also known as an /anemic domain model antipattern/.
+
+In other words, it looks like an improperly designed domain model, but it is a tools, and can be a useful one, for
+specific problems.
+
+* Be Pragmatic
+
+Altough business data is important, and the code we design should protect its integrity, there are cases in which a
+pragmatic approach is more desirable.
+
+This includes, for example, accepting to lose 0.001% of the events, or maybe, accepting some degree of duplication,
+if this does not impact negatively the business.

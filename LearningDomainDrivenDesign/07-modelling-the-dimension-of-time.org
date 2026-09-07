@@ -1,0 +1,275 @@
+#+title: Modelling the Dimension of Time
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Event Sourcing
+
+Basically, instead of storing the state in the db, we store the events related to the state of the entity,
+and the current state can be easily determined by the sum of the events.
+
+This helps we maintain the history of the entity, but not only this. We can find the state of the entity at
+any point of time, simply applying only the events up to some time.
+
+** Search
+
+This is also useful for searches, since we can easily project the historical information, and even do advanced
+filters, such as fetching only the events generated from a specific user, etc.
+
+#+BEGIN_SRC python
+  class LeadSearchModedlProjection:
+      def __init__(self, event: LeadInitialized):
+          self._lead_id = event.lead_id
+          self._first_names = {event.first_name}
+          self._last_names = {event.last_names}
+          self._phone_numbers = {event.phone_numbers}
+          self._version = 0
+
+      @property
+      def lead_id(self) -> LeadId:
+          return self._lead_id
+
+      @property
+      def first_names(self) -> set[str]:
+          return self._first_names
+
+      @property
+      def last_names(self) -> set[str]:
+          return self._last_names
+
+      @property
+      def phone_numbers(self) -> set[PhoneNumber]:
+          return self._phone_numbers
+
+      @property
+      def version(self) -> int:
+          return self._version
+
+      @singledispatchmethod
+      def apply(self, event):
+          raise NotImplementedError
+
+      @apply.register
+      def _(self, event: ContactDetailsChanged):
+          self._first_names.add(event.first_name)
+          self._last_names.add(event.last_name)
+          self._phone_numbers.add(event.phone_number)
+
+          self.version += 1
+
+      @apply.register
+      def _(self, event: Contacted):
+          self.version += 1
+
+      @apply.register
+      def _(self, event: FollowupSet):
+          self.version += 1
+
+      @apply.register
+      def _(self, event: OrderSubmitted):
+          self.version += 1
+
+      @apply.register
+      def _(self, event: PaymentConfirmed):
+          self.version += 1          
+#+END_SRC
+
+** Analysis
+Maybe we want to provide another model, a more analysis-friendly representation of the leads data.
+Maybe they just want the number of follow-up calls scheduled for different leads, and the evolution
+of the status. We can easily do it, creating a new model.
+
+#+BEGIN_SRC python
+  class LeadSearchModedlProjection:
+      def __init__(self, event: LeadInitialized):
+          self._lead_id = event.lead_id
+          self._follow_ups = 0
+          self._status = LeadStatus.NEW_LEAD
+          self._version = 0
+
+      @property
+      def lead_id(self) -> LeadId:
+          return self._lead_id
+
+      @property
+      def follow_ups(self) -> int:
+          return self._follow_ups
+
+      @property
+      def status(self) -> LeadStatus:
+          return self._status
+
+      @property
+      def version(self) -> int:
+          return self._version
+
+      @singledispatchmethod
+      def apply(self, event):
+          raise NotImplementedError
+
+      @apply.register
+      def _(self, event: ContactDetailsChanged):
+          self.version += 1
+
+      @apply.register
+      def _(self, event: Contacted):
+          self.version += 1
+
+      @apply.register
+      def _(self, event: FollowupSet):
+          self._status = LeadStatus.FOLLOWUP_SET
+          self._follow_ups += 1
+          self.version += 1
+
+      @apply.register
+      def _(self, event: OrderSubmitted):
+          self._status = LeadStatus.PENDING_PAYMENT
+          self.version += 1
+
+      @apply.register
+      def _(self, event: PaymentConfirmed):
+          self._status = LeadStatus.CONVERTED
+          self.version += 1          
+#+END_SRC
+
+** Source of Truth
+
+For the event sourcing pattern to work, all changes to an object's state should be represented
+and persisted as events. These events become the system's *source of truth*.
+
+The database that stores the system's events is the only strongly consistent storage:
+*The system's source of truth*.
+
+The name of the database that is used to persist the events is *event store*.
+
+** Event Store
+
+The event store should not allow modifying or deleting the events since it's an append-only storage.
+
+To support implementation of the event sourcing pattern, at a minimum the event store should be able
+to:
+
++ Fetch all events belonging to a specifc business entity
++ Append Events
+
+Example:
+
+#+BEGIN_SRC go
+  type EventStore interface {
+  	Fetch(instanceId Guid) []Event
+  	Append(instanceId Guid, newEvents []Event, expectedVersion int)
+  }
+#+END_SRC
+
+The /expectedVersion/ argument is needed to implement optimistic concurrency management.
+When you append new events, if the version of the entity is *stale* (new events have been added since
+the time you made the decision to add these events), the event store should raise a concurrency exception.
+
+** Event-Sourced Domain Model
+
+The original domain model maintains a state representation of its aggregates and emits select domain events.
+
+The event-sourced domain model uses domain events exclusively for modeling the aggregate's lifecycle.
+
+All changes to an aggregate's state have to be expressed as domain events.
+
+Each operation on an event-sourced aggregate follows the script:
+
+1. Load the aggregate's domain events.
+2. Reconstitute a state representation.
+3. Execute the aggregate's command to produce new domain events.
+4. Commit the new domain events to the event store.
+
+Commit => Send the events from the aggregate to the DB.
+Rehydrate => Generate the aggregate from the domain events.
+
+** Advantages
+
+While compared to the more traditional model, it requires much more effort to model the aggregates, it has
+great advantages for complex business logic.
+
++ Time Traveling.
+  As the state is stored in events, we can restore any past state of the aggregate.
++ Deep Insight.
+  As core subdomains always need to be optimized, the way that you can easily create new models to provide
+  additional insights, and make temporal analysis easily, making it a good choice for complex core subdomains.
++ Audit Log.
+  The persisted domain events represent a strongly consistent audit log of everything that has happened to the
+  aggregates' states.
++ Advanced optimistic concurrency management.
+  When using optimistic concurrency model, usually, if the data is stale, we throw an exception.
+  But, when using event sourcing, as we can know exactly which events have happened since the last time we checked,
+  we can take business domain decisions to proceed, event with these events.
+
+
+** Disadvantages
+
+Though it can look like the Event Sourced Domain Model, is a perfect model to be used whenever is possible, as
+always, it has its own advantages. 
+
++ Learning curve
+  The obvious disadvantage of the pattern is its sharp difference from the traditional techniques of data
+  management.
++ Evolving the model
+  Evolving an event-sourced model can be challenging, as that the events should be immutable. It is waayy more
+  difficult to evolve an event sourced domain model than just running a database migration.
++ Architectural complexity
+  Implementation of event sources introduces numerous architectural "moving parts", making the overall design more
+  complicated.
+
+Also, if the design can be simpler, it should.
+
+* Frequently Asked Questions
+
+** Performance
+
+Indeed, as the events grows, rehydrating the aggregate will require more compute power, something that can affect
+negatively the performance.
+
+It's important to benchmark the effect of working with hundreds or thousands of events, as well as evaluate the
+number of events required in the lifetime of an aggregate.
+
+In most systems, the performance hit will be noticeable only after 10K events per aggregate, and, in the majority
+of the aggregates, their lifespan rarely goes over 100 events.
+
+In the rare cases when projecting state does become a performance issue, you should apply the snapshot pattern.
+
+This pattern implements the following steps:
+
++ A process continuously iterates new events in the event store, generates corresponding projections, and stores
+  them in a cache.
++ An in-memory projection is needed to execute an action on the aggregate. 
+
+Of course, to implement this pattern, it needs to be justified, because it is a lot more complexity.
+
+About scale, it is easy to scale, since all aggregate-related operations are done in the context of a single aggregate,
+the event store can be sharded by aggregate IDs.
+
+** Deleting Data
+
+What if laws impose you to delete data physically?
+
+This can be addressed with the /forgettable payload pattern/.
+
+All sensitive information is included in the events in encrypted form. The encryption key is stored in an external
+key-value store: the key storage.
+
+When the sensitive data has to be deleted, the encryption key is deleted from the key storage. This makes the sensitive
+data inaccessible
+
+** Why Can't I Just...?
+
+*** Why can't I just write logs to a text file and use it as an audit log?
+
+Saving in an audit log, and in a database is completely error prone, because it will tend to lead to inconsistency.
+
+If a database transaction rolls back, for example, if the event logs are not discarted, we get an inconsistent state.
+
+*** Why can't I just keep working with a state-based model, but in the same database transaction, append logs to a log table?
+
+Although this solves the problem in the first approach, it is still error prone, since this leaves the responsibility
+to append in the logs table to the engineers, and it just depends on 1 forgetting to do it, and we get inconsistency.
+
+Also, we need a single source of truth.
+
+*** Why can't I just keep working with a state-based model but add a database trigger that will take a snapshot of the record anc copy it into a dedicated "history" table?
+
+Though this fixes the last problem, it loses a key factor of the event sourcing: We know what changed. but we do not know why.

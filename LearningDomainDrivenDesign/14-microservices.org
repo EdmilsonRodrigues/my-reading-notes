@@ -1,0 +1,143 @@
+#+title: Microservices
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* What is a Service?
+
+A service is a mechanism that enables access to one or more capabilities where the access is provided using
+a prescribed interface.
+
+A service's public interface defines the service itself: the functionality exposed by the service.
+
+* What is a microservice?
+
+Just a service, with a micro public interface.
+
+Having a micro public interface makes it easier to understand both the function of a single service and its
+integration with other system components. It also limits its reasons for change and makes the service more
+autonomous for development, management and scale.
+
+That's also why microservices encapsulate their databases, to not expose such an enourmous public interface.
+
+** Method as a Service: Perfect Microservices?
+
+Saying that a microservice is a micro-public interface may deceive you to thinking a single method service
+would be a perfect microservice. It is not.
+
+By decomposing the system to such fine-grained services, we definitely minimized the services' front doors.
+However, to implement the overarching system's functionality, we had to add enormous "staff only" entrances
+to each service.
+
+** Design Goal
+
+The goal of the microservices architecture is to produce a flexible system.
+
+Concentrating the design efforts on a single component, but ignoring its interactions with the rest of the system,
+goes against the very definition of a system:
+
++ A set of connected things or devices that operate together
++ A set of computer equipment and programs used together for a particular purpose
+
+Hence, a system cannot be built out of independent components. In a proper microservices-based system, however
+decoupled, the services still have to be integrated and communicate with each other.
+
+** System Complexity
+
+Attempting to minimize the local (microservice) complexity will increase the global (complexity).
+
+We need to balance both to an optimum point, because, as well as a monolithic big ball of mud is bad, a distributed
+one is also.
+
+** Microservices as Deep Services
+
+According to John Outserhout in the book /The Philosophy of Software Design/, an effective model is a deep model, and
+an ineffective model is a shallow one.
+
+Imagining a model as a rectangle, where its top is the public interface, and the area is the business logic model, if I
+take 2 rectangles with the same area, but one wider, and one taller, I will see the taller having a small public
+interface, with deep model, and the wider having a huge public interface with a shallow model.
+
+** Microservices as Deep Modules
+
+The notions of deep modules differ from microservices pattern in that the modules can denote both logical and physical
+boundaries, but the microservices are always physical boundaries.
+
+The services implementing a single business method, are shallow modules.
+
+From a system complexity standpoint, a deep module reduces the system's global complexity, while a shallow module
+increases it by introducing a component that doesn't encapsulate its local complexity.
+
+If we decompose a monolith into services, the cost of introfucing a change foes down.
+
+However, if you keep decomposing past the microservices threshold, the deep services become more and more shallow,
+increasing the global complexity drastically.
+
+* Domain Driven Design and Microservices' Boundaries
+
+** Bounded Contexts
+
+The microservices and bounded context patterns have a lot in common, and sometimes are used interchangeably.
+
+Both are physical boundaries.
+Both are owned by a single team.
+Neither can hold conflicting models.
+
+Microservices are bounded contexts.
+
+But, bounded contexts are not necessarily microservices, as the boundaries of a context is delimited by the consistency of the
+models and ubiquite language, not by the number of different functions.
+
+Therefore, the relationship between bounded contexts and microservices is not symmetric.
+
+In fact, a bounded context delimites the maximum size of an optimal monolith.
+
+So, a bounded context can be a monolith, or have many microservices, but a microservice must not englobe more than one
+bounded context never.
+
+** Aggregates
+
+While the bounded contexts impose limits on the widest valid boundaries, the aggregate boundaries are the narrowest possible.
+
+Decomposing an aggregate into multiple physical services is not only suboptimal, but leads to undesired consequences to say the least.
+
+An aggregate, so, is the minimum size a microservice can have. But just having each aggregate as a microservice is suboptimal, since
+we have to consider the relationship of the microservice and the rest of the system.
+
++ Does the aggregate in question communicate with other aggregates in its subdomains?
++ How likely will the aggregate's business logic changes affect other components of the subdomain and vice versa?
+
+The stronger the aggregate's relationship with the other business entities of its subdomain, the shallower it will be as an individual
+service.
+
+** Subdomains
+
+A more balanced heuristic for designing microservices is to align the services with the boundaries of business subdomains.
+
+The subdomains' granularity and the focus on the functionality makes subdomains naturally deep modules.
+
+A subdomains description encapsulates the more complex implementation details.
+
+The coherent nature of the use cases contained in a subdomain also ensures the resultant module's depth.
+
+Splitting them apart would result in shallow modules.
+
+Aligning microservices with subdomains is a safe heuristic that produces optimal solutions for the majority of the microservices. That
+said, there will be cases where other boundaries will be more efficient. E.g: Keeping a wider, linguistic boundary to the bounded context,
+or, maybe, for lack of functionality, keeping at the aggregate level.
+
+* Compressing Microservices' Public Interfaces
+
+In addition to finding service boundaries, DDD can make services deeper, by using Customer-service communication patterns.
+
+** Open Host Service
+
+Introducing the integration-oriented model, the published language reduces the system's global complexity, as the changes in the microservice
+internal models do not reflect on the published language, eliminating the needs for changes in other microservices. It also exposes a more
+modest, integration oriented model, that have less data, in a more convenient model for consumers.
+
+** AntiCorruption Layer
+
+The ACL works the other way around, reducing the complexity of integrating the service with other bounded contexts.
+
+The ACL Service reduces both the local complexity, but also the global one. It also reduces the complexity and return a more fine tailored model
+to the consumer, than the one exposed by the producer.
+

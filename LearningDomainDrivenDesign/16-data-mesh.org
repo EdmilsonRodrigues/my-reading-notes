@@ -1,0 +1,190 @@
+#+title: Data Mesh
+#+author: Edmilson Monteiro Rodrigues Neto
+
+We have seen models used to build operational systems, that implement real-time transactions that manipulate the system's data
+and orchestrate its day-to-day interactions with its evironment.
+
+These are *Online Transactional Processing* Data (OLTP).
+
+Another type of data that deserves attention and proper modeling is *Online Analytical Processing* (OLAP) data.
+
+* Analytical Data vs Transactional Data Model
+
+The OLAP and OLTP models serve different types of consumers, enable the implementation of different kinds of use cases.
+
+OLTP models are built around the various entities from the system's business domain, implementing their lifecycles and
+interactions with one another. So, they need to be optimized to support real-time business transactions.
+
+Analytical models are designed to provide different insights into the operational system. It aims to provide insights into the performance
+of usiness activities, feed ML pipelines, and how the business can optimize its operations to achieve greater value.
+
+OLAP models ignore the individual business entities and focus on business activities by modelling fact tables and dimension tables.
+
+** Fact Table
+
+Facts represent business activities that have already happened.
+
+They are similar to domain events, but without the requirement to name facts as verbs in the past tense.
+
+Their naming is more related to the activities of business processes, such as: Fact_Sales or Fact_CustomerOnboardings.
+
+Also, similar to domain events, fact records are never deleted or modified: OLAP is append only data. The only way to express change in
+state is appending a new row with the new state.
+
+Another difference between OLTP and OLAP data is the granularity.
+
+While OLTP data needs to be always up to date, for OLAP aggregated data is more useful.
+
+Is better, for OLAP data, have a snapshot for each 30 minutes, than to have exactly how the data is at each specific time.
+
+** Dimension Table
+
+Another essential building block of an analytical model is a dimension.
+
+If a fact represents a business process or action (a verb), a dimension describes the fact (an adjective).
+
+The dimensions are designed to describe the facts' attributes and are referenced as a FK from a fact table to a dimension
+table.
+
+This causes an extremely high normalization, as each field of a fact_table except for its PK, are FKs to dimension tables.
+
+The reason for this is the OLAP system's need to support flexible querying.
+
+That's another difference between OLAP and OLTP models. It's possible to predict how an OLTP model will be queried to
+support the business requirements.
+
+The querying patterns of the OLAP models are not predictable. The data analysists need extreme flexibility when looking at the data.
+
+** Analytical Models
+
+The simplest form of table structure for OLAP models, is a Star Schema. It is based on the Many-to-One relationships between the facts
+and their dimensions. Each dimension record is used by many facts, a fact's FK points to a single dimension record.
+
+Another predominant analytical model is the Snowflake Schema.
+
+It is based exactly the same way as the Star Schema, however, in this model, each dimension is multilevel, being further normalized
+into more fine-grained dimensions.
+
+As a result of the additional normalizatoin, it uses less space to store the dimension data, and is easier to maintain.
+
+However, its queries require more joins, and, because of this, more computational resources are needed.
+
+* Analytical Data Management Platforms
+
+** Data WareHouse
+
+The DWH architecture is relatively straightforward.
+
+Extract data from all of the enterprise's operational systems, transform the source data into an analytical model, and load the resultant
+data into a data analysis-oriented database.
+
+This database is the data warehouse.
+
+This data management platform is based primarily on ETL scripts.
+
+The data can come from various sources: operational databases, streaming events, logs, and so on.
+
+In addition to translating the source data into a facts/dimension-based model, the transformation step may include additional operations
+such as removing sensitive data, deduplicating records, etc.
+
+The data is exposed using SQL, and used by data analysts and BI engineers.
+
+As well as we already discussed, that an ubiquitous language for the entire company is not possible, it will also not be possible for analytical
+data.
+
+For this, we can use Data Marts, as databases that hold data relevant for well-defined analytical needs, such as analysis of a specific bounded
+context.
+
+Another challenging aspect of the data warehouse architecture is that the ETL processes create a strong coupling between the OLAP and the
+OLTP systems.
+
+Changes in the OLTP models are constant, and this can break the ETL scripts, since the OLTP systems are focusing only on their own needs
+instead of the  OLAP system needs.
+
+** Data Lake
+
+The Data Lake Architecture is similar to the DWH, but, instead of being transformed right away into OLAP models, the data is persisted in its
+raw form.
+
+Then, the Data Engineers will create the ETL scripts, from the Data Lake to the Data Warehouse.
+
+This increases drastically the versatility, since ETLs can be changed, and no data will be lost, as well as new ETLs be created and use the old
+data, having the new OLAP models, filled with records as old as the older ones.
+
+But, this can also make the data lake become a data swamp, with lots of chaotic unorganized data.
+
+** Challanges of Data Warehouse and Data Lake Architectures
+
+As they are extremely coupled to the OLTP systems, that are in constant change, specially in DDDs codebases, this can cause friction between
+the development and data teams, specially as the data team does not have the same business domain knowledge as the development team.
+
+* Data Mesh
+
+The Data Mesh Architecture is, in a sense, DDD for analytical data.
+
+As the different patterns of DDD draw boundaries and protect their contents, the data mesh architecture defines and protects model and ownership
+boundaries for analytical data.
+
+** Decompose Data Around Domains
+
+Both the Data Warehouse and Data Lake approaches aim to unify all of the enterprise's data into one big model.
+
+The resultant analytical model is ineffective for all the same reasons as an enterprise-wide operational model is.
+
+The data mesh solution for it is using multiple analytical models and align them with the origin of the data (the bounded context that generated it).
+
+This makes each bounded context owning its OLTP and OLAP models.
+
+Consequently, the same team own the OLTP is now in charge of transforming it into the OLAP.
+
+** Data as a Product
+
+Instead of gathering a lot of unorganized data to try to work some sense out of them later, as in the traditional data management architectures,
+especially Data Lake, in data mesh, the bounded contexts serve the OLAP data through well defined output ports, to be consumed the same way
+as their OLTP data are.
+
+Analytical data should be treated the same as any public API:
+
++ It should be easy to discover the necessary endpoints: the data output ports
++ The analytical endpoints should have a well defined schema describing the served data and its format.
++ The analytical data should be trustworthy, and, as with any API, it should have defined and monitored SLAs.
++ The analytical model should be versioned as a regular API and correspondingly manage integration-breaking changes in the model.
+
+Also, as it is being treated as a product, the team needs to ensure that it addresses the needs of its consumers.
+
+Also, different consumers may require the analytical data in different forms.
+
+Some may prefer to execute SQL queries, others to fetch the data from an Object Storage, etc.
+
+So, the data products have to be polyglot, serving the data in formats that suit different consumers' needs.
+
+** Enable Autonomy
+
+The product teams should be able to both create their own data products and consume data products served by other bounded contexts.
+
+It should be wasteful, inefficient, and hard to integrate if each team builds their own solution for serving analytical data.
+
+To prevent this from happening, a platform is needed to abstract the complexity of building, executing, and maintaining interoperable data products.
+
+Designing and maintaining this requires a dedicated data infrastructure platform team.
+
+This team should be in charge of defining the data product blueprints, unified access patterns, access control, and polyglot storage that can be leveraged
+by product teams, as well as monitoring the platform and ensuring the SLAs and objectives are met.
+
+** Build an Ecosystem
+
+Finally, is needed to appoint a federated governance body to enable interoperability and ecosystem thinking in the domain of the analytical data.
+
+Typically, it eould be the bounded context's data and product owners, and representatives of the Data Infrastructure Platform Team.
+
+This group is in charge of defining the rules to ensure a healthy and interoperable ecosystem.
+
+** Combining Data Mesh and Domain Driven Design
+
+These are the 4 principles that the data mesh architecture is based on.
+
+It is clearly based in the same principles as DDD.
+
+
+
+

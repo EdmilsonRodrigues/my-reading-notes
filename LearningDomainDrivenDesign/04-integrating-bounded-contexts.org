@@ -1,0 +1,177 @@
+#+title: Integrating Bounded Contexts
+#+author: Edmilson Monteiro Rodrigues Neto
+
+Different bounded contexts need to be integrated in order to build the software in the end.
+But, how can we integrate them if they use different ubiquitous languages?
+
+There are three main strategy groups:
++ Cooperation
++ Customer-Supplier
+ Separate Ways
+
+* Cooperation
+
+Cooperation patterns relate to bounded contexts implemented by a single team or teams with a well-stablished communication.
+
+This one is very used by one team that manages more than one bounded contexts, or to interdependent bounded contexts, as
+the success of one impacts the success of the other.
+
+The main criterion here is the quality of the team communication.
+
+Let's see some patterns of this strategy group
+
+** Partnership
+
+In the partnership model, the integration between bounded contexts is coordinated plainly by the communication of the teams.
+
+If one team changes the contract, it tells it to the other, and the other team adapts, and vice-versa.
+
+This requires the greatest level of communication, well-established collaboration practices, high levels of commitment, and
+frequent synchronization between the teams.
+
+** Shared Kernel
+
+This one is used when the communication and partnership is not so fine tuned as in the Partnership pattern. In this case,
+one or more bounded contexts share models or logic between them. We will then have a shared kernel, that will be used by
+these bounded contexts, and both teams can modify this kernel.
+
+*** Shared Scope
+
+As more than one bounded context share the same kernel, the scope of this kernel needs to be minimized to the minimum possible
+since it will have immediate cascading effects on any changes.
+
+Ideally, it will consist only of integration contracts and data structures that are intended to be passed accross the bounded
+contexts' boundaries.
+
+*** Implementation
+
+If the organization uses the mono-repository approach, these can be the same souce files referenced by multiple bounded contexts.
+
+If using multirepo, this should be extracted into a shared library, that will be imported by both systems.
+
+Either way, changes of the shared kernel should trigger integration tests in all bounded contexts that use it.
+
+*** When to use Shared Kernel
+
+The most important criterion here is Cost of Duplication vs Cost of Coordination.
+
+It should only be applied when the cost of coordination between the teams and the bounded contexts is lower than the cost of
+duplicating this code.
+
+The differeence between the integration and duplication costs depends on the volatility of the model. The more frequent it changes,
+the higher the integration costs will be.
+
+Therefore, the shared kernel will naturally be applied for the subdomains that change the most: the core subdomains.
+
+Since the Shared Kernel breaks the boundaries of the bounded contexts pattern, it must be justified in order to be used.
+
+A common usecase is when the team communication and collaboration is not good enough to use the partnership pattern, since its
+strong CI requirements will force these changes to not affect the other bounded contexts, since it will fail the integration tests.
+
+Another common use case for applying it is the gradual modernization of a legacy system. This is a useful pattern to gradually
+decompose the system into bounded contexts.
+
+Finally, it can also be useful by bounded contexts managed by the same team, in order to explicit the contracts between these bounded
+contexts.
+
+* Customer-Supplier
+
+One bounded context acts as a Upstream Supplier, and the other as a Downstream Consumer.
+
+Unlike the cooperation case, both teams can succeed independently. This causes an imbalance of power: Either the upstream or the
+downstram team accn dictate the integration contract.
+
+Here are some patterns of this strategy group:
+
+** Conformist
+
+This pattern is when the upstream team is favored by the power. Instead of supporting the clients' needs, it only provides an
+integration contract, and the clients must adhere to it.
+
+This may occur because the upstream is an external provider, or maybe internal policies, maybe the upstream team implements an industry
+standard, well-established model, or just be good enough.
+
+** Anticorruption Layer
+
+As in the conformist pattern, the balance of power is still skewed toward the upstream service. However, in this case, the downstream
+bounded context is not willing to conform.
+
+Instead, it translate the upstream bounded context's model into a model tailored to its own needs via an anticorruption layer.
+
+This pattern addresses scenarios in which it is not desirable or worth the effort to conform to the supplier's model, such as the following:
+
++ When the downstream bounded context contains a core subdomain.
++ When the upstream model is inefficient or inconvenient for the consumer's needs
++ When the supplier's contract changes often.
+
+** Open-Host Service
+
+This pattern addresses cases in which the power is skewed toward the consumers.
+The supplier is interested in protecting its consumers and providing the best service possible.
+
+To protect the consumers from changes in its implementation model, the upstream supplier decouples the implementation model from the public
+interface. It creates the Open-Host Service, a service meant to translate the service implementation model to the output.
+
+The supplier's public interface is not intended to conform to its ubiquitous language.
+Instead it uses a protocol convenient for the consumers. This protocol is called the /published language/.
+
+It is similar to the anticorruption layer pattern, but inverted.
+
+One Open-Host Service can have more than one Published Languages, in order to adapt to each Bounded Context clients.
+
+* Separate Ways
+
+The last collaboration strategy is: Do not collaborate. This pattern can arise from many reasons, from teams not willing to collaborate, to
+teams unable to collaborate.
+
+** Communication Issues
+
+A common reason for avoiding collaboration is communication difficulties caused by organization's size or internal politics.
+
+When teams have a hard time collaborating and aagreeing, it may be more cost-effective to go their separate ways and duplicate functionality
+in multiple bounded contexts.
+
+** Generic Subdomains
+
+When the subdomain in question is generic, and if the generic solution is easy to integrate, it may be more cost-effective to integrate it lo-
+cally in each bounded context.
+
+An example is a logging framework.
+
+** Model Differences
+
+Differences in the bounded contexts' models can also be a reason to go with a separate ways collaboration.
+
+The models may be so different that a conformist relantoinship is impossible, and implementing an anticorruption layer would be more expensive
+than duplicating the functionality.
+
+Obviously, this pattern should be avoided when integrating core subdomains.
+
+* Context Map
+
+#+BEGIN_COMMENT
+Create later the Context Map here.
+#+END_COMMENT
+
+The context map is a visual representation of the system's bounded contexts and the integrations between them.
+
+This visual notation gives valuable strategic insight one multiple levels:
+
++ High-Level Design
++ Communication Patterns
++ Organization Issues
+
+** Maintenance
+
+Ideally, a context map should be introcuded into a project right from the get-go, and be updated to reflect additions of nre bounded contexts and
+modifications to the existing one.
+
+Its maintenance should be a shared effort.
+
+** Limitations
+
+It's important to note that charting a context map can be a challanging task.
+
+When a system's bounded contexts encompass multiple subdomains, there can be multiple integration patterns at play, such as two bounded contexts
+integrating via Partnership, with one of their subdomains and ACL in the other.
+

@@ -1,0 +1,431 @@
+#+title: Tackling Complex Business Logic
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* History
+
+As with both the transaction script and active record patterns, the domain model pattern was introduced
+initially in Martin Fowler's book /Patterns of Enterprise Application Architecture/. But the latter was
+better developed by Eric Evans, in the book /Domain Driven Design: Tackling Complexity in the Heart of Software/.
+
+In his book, Evans presents a set of patterns aimed at tightly relating the code to the underlying model
+of the business domain: /aggregate/, /value objects/, /repositories/, and others.
+
+The patterns that Evans introduced are often referred to as /tactical domain-driven design/. But, do not
+think that to implement Domain Driven Design, you need to implement the Domain Model. This is false, and,
+then, we will call it as /Domain Model/ to avoid confusion.
+
+* Domain Model
+
+This pattern is intended to cope with cases od complex business logic, different from the active record and
+the transaction script. Instead of CRUD interfaces, we deal with complicated state transitions, business
+rules, and invariants: Rules that have to be protected all times.
+
+** Implementation
+
+A *Domain Model* is an object of the domain that incorporates both behavior and data.
+
+DDD's tactical patterns (aggregates, value objects, domain events, and domain services) are the building
+blocks of such an object model.
+
+All of these patterns share a common theme: They put the business logic first.
+
+*** Complexity
+
+The domain's business logic is already inherently complex, so the objects used for modelling it should not
+introduce any additional accidental complexities.
+
+*The model should be devoid of any infrastructural or technological concerns*, such as database calls, or
+external components.
+
+The model objects, need to be plain old objects, implementing business logic, without relying on ot directly
+incorporating any infrastructureal components or frameworks.
+
+*** Ubiquitous language
+
+The emphasis on business logic instead of technical concerns makes it easier for the domain model's objects to
+follow the terminology of the bounded context's ubiquitous language.
+
+** Building Blocks
+
+*** Value Object
+
+A value object is an object that can be identified by the composition of its values. For example, consider a
+color object:
+
+#+BEGIN_SRC python
+  class Color:
+      def __init__(self, red: int, green: int, blue: int):
+          self._red = red
+          self._green = green
+          self._blue = blue
+
+      def __hash__(self):
+          return hex(self._red) + hex(self._green) + hex(self._blue)
+
+      def __eq__(self, other):
+          return hash(self) == hash(other)
+#+END_SRC
+
+The composition of the values of three fields red, green and blue defines a color. Changing any would turn into a new color.
+
+No two colors can have the same values, they would be the same color.
+
+In a table storing a value object, we do not need an ID, because the combination of a value objects fields, is itself, unique.
+
+**** Ubiquitous language
+
+Relying exclusively on the language's standard library's primitive data types to represent concepts of the business domain is
+known as the primitive obsession's code smell.
+
+So, when creating classes, instead of passing things such as strings, integers, floats, create value objects using the
+ubiquitous language, and pass PersonId, Name, PhoneNumber, EmailAddress, value objects, for examples.
+
+First, we notice the increased clarity. as a type /CountryCode/ is way more explicit than a type string. This helps making the
+type system itself prevent bugs.
+
+Also, it leaves the input validation as a responsibility of the value object, instead of relying on the model for this. But it
+does not need only the validation logic, but also the business logic that manipulates the values.
+
+Most importantly, value objects express the business domain's concepts: They make the code speak the ubiquitous language.
+
+Compared to an integer-based value, the Height value object both makes the intent clear and decouples the measurement from a
+specific measure unit:
+
+#+BEGIN_SRC python
+  height_metric = Height.from_metric(180)
+  height_imperial = Height.from_imperial(5, 3)
+
+  string1 = height_metric.to_string()  # 180cm
+  string2 = height_imperial.to_string()  # 5 feet 3 inches
+  string3 = height_metric.to_imperial().to_string()  # 5 feet 11 inches
+
+  first_is_higher = height_metric > height_imperial;  # true
+#+END_SRC
+
+The PhoneNumber value object can encapsulate the logic  of parsing a string value, validating it, and extracting different
+attributes, for example. And so on.
+
+
+**** Implementation
+
+Since a change to any of the fields of a value object results in a different value, they should always be immutable objects.
+
+Therefore when an executed action results in a new value, it should not modify the original, but return a new one.
+
+Since the equality of value objects is based on their values rather than on an id field or reference, it's important to
+override and properly implement the equality checks.
+
+Although using a core object string may look like is a contradiction, in many languages they are already implemented as value
+objects.
+
+Example:
+
+#+BEGIN_SRC python
+  class Color:
+      def __init__(self, red: int, green: int, blue: int):
+          self._red = red
+          self._green = green
+          self._blue = blue
+
+      def __hash__(self):
+          return hex(self._red) + hex(self._green) + hex(self._blue)
+
+      def __eq__(self, other):
+          return hash(self) == hash(other)
+
+      def mix_colors(self, color) -> Self:
+          return type(self)(
+              min(self._red + color._red, 255),
+              min(self._green + color._green, 255),
+              min(self._blue + color._blue, 255)
+          )
+#+END_SRC
+
+
+**** When to use Value Objects
+
+The simple answer is, whenever is possible.
+
+Not only they make the code more expressive, and encapsulate business logic, that tends to spread apart, but also makes the code
+safer. They are also immutable and thread safe.
+
+From a business perspective, it is a good heuristic to use value objects for domain's elements, that describe properties of other
+objects.
+
+This namely applies to properties of entities, such as ID, name, phone numbers, email, and so on. Other examples of using value
+objects include various statuses, passwords, and more business domain-specific concepts that can be identified by their values,
+and, thus, do not require an explicit identification field.
+
+An especially important opportunity to introduce a value object is when modeling money and other monetary values, since relying on
+primitive types to represent money not only limits your ability to encapsulate all money related business logic in one place, but
+also is prone to dangerous bugs. Specially rounding errors and floating point mathematics.
+
+*** Entities
+
+An /entity/ is the opposite of a value object.
+
+It requires an explicit identificaation field to distinguish between the different instances of the entity.
+
+For example:
+
+#+BEGIN_SRC python
+  class Person:
+      def __init__(self, id: PersonId, name: Name):
+          self.id = id
+          self.name = name
+
+      def __hash__(self):
+          return self.id
+
+      def __eq__(self, other):
+          return self.id == other.id
+#+END_SRC
+
+The central requirement for the identification field is that it should be unique for each instance of the entity: for each person, in
+this case.
+
+Furthermore, except for very rare exceptions, the value of an entity's identification field should remain immutable throughout the
+entity's lifecycle.
+
+This brings to the most important distinction between value objects and entities: *Entities are mutable and expected to change.*
+
+Although the entities are essential building blocks of any business domain, they are not implemented by themselves, but as a part of
+the aggregate pattern.
+
+*** Aggregates
+
+An aggregate is an /entity/. However, it is much more than just an entity. The goal of the pattern is to protect the consistency of
+its data. Since its data is mutable, there are implications and challanges that the pattern has to address to keep its state
+consistent at all times. 
+
+
+**** Consistency Enforcement
+
+Since an aggregate's state can be mutated, it creates an opening for multiple ways in which its data can become corrupted.
+
+To enforce consistency of the data, the aggregate is a consistency enforcement boundary. Its logic has to validate all incoming
+modifications, and ensure that the changes do not contradict its business rules.
+
+All processes or objects external to the aggregate are only allowed to read the aggregate's state. Its state can only be mutated by
+executing corresponding methods of the aggregate's public interface.
+
+The state-modifying methods exposed as an aggregate's public interface are often referred to as /commands/.
+
+A command can be implemented in two ways:
+
++ A plain public method of the aggregate object:
+
+  #+BEGIN_SRC python
+    class Ticket:
+        def add_message(from_: UserId, body: string):
+            message = Message(from_, body)
+            self._messages.append(message)
+  #+END_SRC
+
++ Alternatively, it can be represented as a parameter object that encapsulates all the input required for executing the command.
+
+  #+BEGIN_SRC python
+    class Ticket:
+        @singledispatch
+        def execute(command):
+            raise NotImplementedError
+
+        @execute.register
+        def _(command: AddMessage):
+            message = Message(command.from_, command.body)
+            self._messages.append(message)
+
+        @execute.register
+        def _(command: RemoveMessage):
+            message = [m for m in self._messages if message.id == command.id].pop()
+            self._messages.remove(message)
+  #+END_SRC
+  
+How commands are expressed in an aggregate's code is a matter of preference.
+
+(The author and I preferred this command dispatching way).
+
+An aggregate's public interface is responsible for validating the input and enforcing all of the relevant
+business rules and invariants.
+
+This strict boundary also ensures that all business logic related to the aggregate is implemented inone place:
+the aggregate itself.
+
+This makes the application layer rather simple, as it only needs to load the aggregate's current state, execute
+the required action, persist the modified state, and return the operation's result to the caller:
+
+#+BEGIN_SRC python
+  def escalate(id: ticket_id, reason: EscalationResult) -> ExecutionResult:
+      try:
+          ticket = ticket_repository.load(id)
+          cmd = Escalate(reason)
+          ticket.execute(cmd)
+          ticket_repository.save(ticket)
+          return ExecutionResult.Success()
+      except ConcurrencyException as exc:
+          return ExecutionResult.Error(exc)
+#+END_SRC
+
+Pay attention to the concurrency check in the preceding code.
+
+It's vital to protect the consistency of an aggregate's state.
+
+If multiple process are concurrently updating the same aggregate, we have to prevent the latter transaction from
+blindly overwriting the changes committed by the first one.
+
+In such a case, the second process has to be notified that the state on which it had based its decisions is out of
+date, and it has to retry the operation.
+
+Hence, the database used for storing aggregates has to support concurrency management. A simple form is an optmistic
+lock: first, the aggregate stores its version, then:
+
+#+BEGIN_SRC sql
+  UPDATE tickets
+      SET ticket_status = @new_status
+      agg_version = agg_version + 1
+      WHERE ticket_id=@id AND agg_version=@expected_version
+#+END_SRC
+
+This SQL statement applies changes made to the aggregate instance's state, and increases its version counter, but only
+if the current version equals the one that was read prior to applying changes to the aggregate's state.
+
+**** Transaction Boundary
+
+Since an aggregate's state can only be modified by its own business logic, the aggregate also acts as a transactional
+boundary. All changes made to the aggregate's state should be committed transactionally as one atomic operation.
+
+Furthermore, no system operation can assume a multi-aggregate transaction.
+
+The one aggregate instance per transaction forces us to carefully design an aggregate's boundaries, ensuring that the
+design addresses the business domain's invariants and rules.
+
+But what about if wew need to modify multiple objects in the same transaction?
+
+**** Hierarchy of entities
+
+As we discussed early, entities are not independent patterns, just part of aggregates. 
+
+There are business scenarios in which multiple objects should share a transactional boundary.
+
+
+DDD prescribes that a system0s design should be driven by its business domain. Aggregates are no exception.
+To support changes to multiple objects that have to be applied in one atomic transaction, the aggregate pattern resembles
+a hierarchy of entities, all sharing transactional consistency.
+
+That's why the pattern is called aggregate: It aggregates business entities and value objects that belong to the same
+transaction boundary.
+
+**** Referencing aggregates
+
+Since all objects contained by an aggregate share the same transactional boundary, performance and scalability issues may
+arise if an aggregate grows too large.
+
+The consistency of the data can be a convenient heuristic for designing an aggregate's boundaries. Only the informaation
+that is required by the aggregate's business logic to be strongly consistent should be a part of the aggregate.
+
+All information that can be eventually consistent should reside outside of the aggregate's boundary:
+
+For example, as a part of another aggregate.
+
+The heuristic is to keep the aggregates as small as possible and include only objects that are required to be in strongly
+consistent state by the aggregate's business logic.
+
+#+BEGIN_SRC python
+  class Ticket:
+      customer: UserId
+      products: list[ProductId]
+      assigned_agent: UserId
+      messages: list[Message]
+#+END_SRC
+
+As the messages are required to be strongly consistent, they are actually part of the aggregate. As the customer, assigned
+agent and products are not required to be strongly consistent, we just record a reference to them.
+
+**** The Aggregate Root
+
+We saw earlier that an aggregate's state can only be modified by executing one of its commands. Since an aggregate represents
+a hierarchy of entities, only one of them should be designated as the aggregate's public interface: *The aggregate root*.
+
+#+BEGIN_SRC python
+  class Ticket:
+      def execute(cmd: AcknowledgeMessage):
+          message = [x for x in self._messages if x.id == cmd.id].pop()
+          message.was_read = True
+#+END_SRC
+
+While the was_read property is a part of the Message object, to acknowledge it, it needs to come from a command from the aggregate's
+root, the Ticket object.
+
+In addition to the aggregate's root, the world can also communicate with an aggregate through domain events.
+
+**** Domain Events
+
+A domain evevnt is a message describing a significant event that has occurred in the business domain.
+
+For example:
+
++ Ticket assigned
++ Ticket escalated
++ Message received
+
+Since domain events describe something that has already happened, their names should be formulated in the past tense.
+
+The goal of a domain event is to describe what has happened in the business domain and provide all the necessary data related to the
+event.
+
+Examples:
+
+#+BEGIN_SRC python
+  {
+      "ticket-id": "c9d286ff-3bca-4f57-94d4-4d4e490867d1",
+      "event-id": 146,
+      "event-type": "ticket-escalated",
+      "escalation-reason": "missed-sla",
+      "escalation-time": 1628970815,
+  }
+#+END_SRC
+
+Naming is important, as with almost everything in software engineering.
+
+Make sure the names of the domain events succinctly reflect exactly what has happened in the business domain.
+
+Domain events are part of an aggregate's public interface.
+
+An aggregate publishes its domain events. Other processes, aggregates, or even external systems can subscribe to
+and execute their own logic in response to the domain events.
+
+**** Ubiquitous language
+
+Last, but not least, aggregates should reflect the ubiquitous language.
+
+The terminology that is used for the aggregate's name, its data members, its actions, and its domain events shouls
+all be formualted in the bounded context's ubiquitous language.
+
+*** Domain Services
+
+Sooner or later, you may encounter business logic that isn't part of any aggregate or value object, or that seems to
+be relevant to multiple aggregates.
+
+In such cases, domain-driven design proposes to implement the logic as a *domain service*.
+
+A domain service is a stateless object that implements the business logic.
+
+In the vast majority of cases, such logic orchestrates calls to various components of the systemm to perform some
+calculation or analysis.
+
+Domain services make it easy to coordinate the work of multiple aggregates. However, it is important to always keep
+in mind the aggregate pattern's limitation of modifying only one instance of an aggregate in one database transaction.
+
+Domain services are not a loophole around this limitation. Instead, they are used for calculations that requires reading
+the data of multiple aggregates.
+
+** Managing Complexity
+
+The complexity of an aggregate is measured, not by the number of methods or calculations it has, but, instead, by the
+degrees of freedom of the aggregate.
+
+The degrees of freedom of an aggregate are given by the number of independent data elements you need to describe the state
+of an aggregate.
+
+Since the domain model pattern make aggregates only able to modify their state via internal methods, they reduce their
+degrees of freedom. This makes them best applied for subdomain with complex business logic, such as *core subdomains*.

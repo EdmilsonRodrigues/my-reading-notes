@@ -1,0 +1,103 @@
+#+title: Managing Domain Complexity
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Inconsistent Models
+
+Imagine the following scenario:
+
+- The marketing department has the /lead/ as the event of receiving the prospective customer's contact details.
+- The sales department has the /lead/ as a much more complex entity, representing the entire lifecyfcle of the sales process.
+
+But, how can we have a ubiquitous language that encompass these two mental models?
+
+We can't.
+
+The characteristic of a ubiquitous language is not to be universal in the company, but universal in the context
+it is being used.
+
+* What is a Bounded Context?
+
+So, the solution in domain-driven design for inconstant models is dividing the language into multiple smaller ubiquitous
+languages.
+
+The context where each ubiquitous language is used is called its bounded contexts.
+
+** Model Boundaries
+
+As we discussed in the previous chapter, a model is not a copy of the real world but a construct that helps us make sense of a
+complex system.
+
+It is specially important to remember always: A model is only useful within its context. Within its boundaries. The ubiquitous
+language, the subdomains, etc, are just models, and, as such, only work within the Model Boundaries.
+
+** Ubiquitous Language Refined
+
+So, a ubiquitous language is not "ubiquitous" in the sense of universal. It is not universal.
+
+Instead, it is universal within its bounded context.
+
+** Scope of a Bounded Context
+
+Defining the scope of a ubiquitous language (it's bounded context) is a strategic design decision. A bounded context's size, by
+itself, is not a deciding factor. Models shouldn't necessarily be big or small. *Models need to be useful.*
+
+The wider the boundary is, the harder to keep it consistent. The smaller it is, yhe more integration overhead the design induces.
+
+Therefore, keep your models useful, and align the bounded contexts' sizes with your business needs and organizational constraints.
+
+To avoid too big boundaries, or too short ones, use the same heuristic used to find subdomains:
+Identify sets of coherent use cases that operate on the same data and avoid decomposing them into multiple bounded contexts.
+
+* Bounded Contexts Versus Subdomain
+
+Though bounded contexts and subdomains can look the same, they aren't
+
+** Subdomains
+
+The business domain and subdomains are just a model created by analysing the business domain.
+
+** Bounded Contexts
+
+The bounded contexts, different than subdomains that are just identified through an analysis, are designed. It is a strategic
+design decision, not only a plain description of a business domain, as the subdomains are.
+
+** The Interplay Between Subdomains and Bounded Contexts
+
+There can be many different ways of organizing subdomains into bounded contexts.
+
+In small systems, a monolithic bounded context is possible (all subdomains are inside the bounded contexts).
+
+When the system grows, we can break into two or three bounded contexts.
+
+As it continues growing, it can have up to 1 bounded context for each subdomain.
+
+* Boundaries
+
+** Physical Boundaries
+
+Bounded contexts are not only model boundaries, but physical boundaries. Each bounded context must be implemented as an
+individual service/project. It should be implemented, evolved, and versioned independently of other bounded contexts.
+
+Clear physical boundaries between bounded contexts allow us to implement each bounded context with the technology stack
+that best fits its need.
+
+As discusses early, a bounded context can contain multiple subdomains. In such case, the bounded context is a physical
+boundary, while the subdomains are logical boundaries.
+
+** Ownership Boundaries
+
+Each bounded context should be managed by one and only one team.
+Each team can manage one or more bounded contexts.
+
+* Bounded Contexts in Real Life
+
+We use the same concept of Bounded contexts every day in our general life.
+
+** Semantic Domains
+
+One example is the semantic domains:
+
+- A tomato is a fruit in the semantic domain of botany, but a vegetable in the semantic domain of culinary.
+- Sugar is any carbohydrate in the semantic domain of Biology, any simple carbohydrate in nutrition, and Sucrose in
+  culinary.
+- A break is a fracture when we talk about bones, but an important news when we talk about journalism.

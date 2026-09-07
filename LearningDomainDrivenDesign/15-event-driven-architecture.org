@@ -1,0 +1,188 @@
+#+title: Event Driven Architecture
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Event Driven Architecture
+
+Instead of calling the services' endpoints synchronously, the components publish events to notify other system
+elements of changes in the system's domain.
+
+The components can subscribe to events raised in the system and react accordingly. The SAGA pattern execution
+flow is a typical exemple of EDA.
+
+Important to highlight though, EDA is not Event Sourcing. Event Sourcing is a method for capturing changes in state
+as a series of events.
+
+EDA is about communication between services.
+
+Event Sourcing is about keeping track of a state, and is inside a service.
+
+The kinds of events sent by the two patterns are completely different.
+
+* Events
+
+In an EDA system, the exchange of events is the key communication mechanism for integrating the components and
+making them a system.
+
+** Events, Commands, and Messages
+
+So far, the definition of an event is similar to the definition of the message pattern.
+
+However, though an event is a message, a message is not necessarily an event.
+
+There are two kinds of messages:
+
++ Event
+  A message describing a change that has already happened
++ Command
+  A message describing an operation that has to be carried out
+
+While both are messages that will be communicated asynchronously, a command can be reject, since it's a request,
+while an event cannot be cancelled, since it has already happened.
+
+The only thing that can be done to overturn an event is to issue a compensating action, as in the SAGA pattern.
+
+Also, important to name an event in the past tense, such as /DeliveryScheduled/.
+
+** Structure
+
+An event is a data record that can be serialized and transmitted using the messaging platform of choice.
+
+A typical event schema includes the event's metadata and its payload.
+
+An event's payload not only describes the information conveyed by the event, but also defines the event's type.
+
+** Types of Events
+
+*** Event Notification
+
+Is a message regarding a change in the business domain that other components will react to.
+
+The event notification should not be verbose: The goal is to notify the interested parties about the event, but it shouldn't
+carry all the information needed for the subscribers to react to the event.
+
+For example:
+
+#+BEGIN_SRC json
+  {
+      "type": "paycheck-generated",
+      "event-id": "71177d05-cd25-48b3-a961-e117832a5a2a",
+      "delivery-id": "be8f9949-48af-4262-8a02-2f13f50a6019",
+      "timestamp": 1788705252,
+      "payload": {
+          "employee-id": "14257",
+          "link": "/paycheck/14257/2026/01"
+      }
+  }
+#+END_SRC
+
+In this example, it only notifies that the paycheck was generated, and gave a link to fetch more detailed information, if
+necessary.
+
+It similar to the WEA (Wireless Emergency Alert) system used to broadcast short messages about public health concerns,
+safety threats, and other emergencies.
+
+This succinctness can be preferable in multiple scenarios
+
+**** Security
+
+Enforcing the recipient to explicitly query for the detailed information prevents sharing sensitive information over the
+messaging infrastructure.
+
+**** Concurrency
+Due to the asynchronous nature of event driven communication, if the info is sensitive to race conditions, querying it
+explicitly allows getting the up-to-date state.
+
+*** Event Carried State Transfer
+
+ECST messages notify subscribers about changes in the producer's internal state.
+
+Contrary to Event Notification, they include all the data reflecting the change in the state.
+
+It can come both as a complete snapshot of the modified entity's state, or only of its modified fields.
+
+Whichever of these two is chosen by the publisher, the consumers are able to hold a local cache of the entities' states and
+work with it.
+
+This helps both for fault tolerance, having a fallback in case of the service going down, but also making a service that queries
+for other services be able to use its cache and prevents this.
+
+*** Domain Event
+
+It looks like something between event notifications and ECST, since it notifies an important event, at the same time that it
+carries all the data of such event, but it is conceptually different.
+
+**** Domain Events vs Event Notifications
+
+Both describe changes in the producer's business domain.
+
+But there are two main differences:
++ Domains events include all the information describing the event
++ The modelling intent is different.
+  - Event notifications are modelled thinking on the integration with other services
+  - Domain Events are modelled to describe the business domain. They can be useful even with no consumers. This is
+    specially true in event-sourced systems, where the Domain Events can be used to recreate all possible states.
+
+**** Domain Events vs Event Carried State Transfer
+
+The data contained in domain events is conceptually different from the schema of a typical ECST message.
+
+An ECST message always provide sufficient information to hold a local cache of the producer's data.
+
+No single domain event is supposed to expose such a rich model. They are meant to share the information about the event,
+not about the entirety of the state of the entity related to it.
+
+* Designing Event-Driven Integration
+
+** Temporal Coupling
+
+This coupling happens when, in an asynchronous design, the same event must be processed by more than one services in a
+specific order, such as one service needing to query the other after this second finish its processing of the message.
+
+** Functional Coupling
+
+This coupling happens when, in an asynchronous design, the same event must be processed the same way by more than one
+service, generating duplicated logic, and waste of computing resources.
+
+** Implementation Coupling
+
+If more than one service subscribes the same way for the messages of the producer, if the producer changes its events, all the
+subscribers also need to change at the same time.
+
+** Refactoring the event-driven integration
+
+If two or more services are functionally coupled in a way that they need to generate the state of the entities based on the event
+domains, an Open Host Service can be created to get these Domain Events and publish ECST messages, so both will have the
+state without needing to calculate it.
+
+If two services are timely coupled, you could make the one that needs to be done first be the only one to subscribe to the messages
+and publish event notifications to the other when the processing is done, assuring it will always fetch the right state.
+
+** Event-Driven Design Heuristics
+
+*** Assume the worst
+
+As Andrew Grove put: the paranoid survive.
+
++ The network is going to be slow
++ Servers will fail at the most incovenient moment
++ Events will arrive out of order
++ Event will be duplicated
+
+Most importantly, these problems will occur most frequently on weekends and public holidays.
+
+So, as the events are extremely important, ensure they will be always delivered, no matter what:
+
++ Use the outbox pattern to publish messages reliably
++ When publishing messages, ensure the subscribers will be able to deduplicate, identify and reorder them
++ Leverage the saga and process manager patterns when orchestrating cross-bounded context process that require compensating actions
+
+*** Use public and private events
+
+Use public events publishing only the information the consumers need.
+
+Events are part of the public interface of a service. Remember to keep it as small as possible.
+
+*** Evaluate consistency requirements
+
++ If the components can settle for eventually consistent data, use ECST
++ If the consumer needs to read the last write in the producer's state, issue an Event Notification message.

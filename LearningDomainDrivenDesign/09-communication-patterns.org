@@ -1,0 +1,140 @@
+#+title: Communication Patterns
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Model Translation
+
+** Stateless Model Translation
+
+For stateless model translation, the bounded context that owns the translation (OHS for upstream, ACL for downstream)
+implements the /proxy design pattern/ to interject the incoming and outgoing requests and map the source model to the
+bounded context's target model.
+
+Implementation of the proxy depends on whether the bounded contexts are communicating synchronously or asynchronously.
+
+*** Synchronous
+
+The bounded context 1 requests to the proxy, it transforms the request and requests the bounded context 2, than the
+proxy receives the response, and returns the transformed response.
+
+It can be more cost-effective and convenient to offload this translation logic to an /API Gateway Pattern/.
+
+For bounded contexts implementing the open-host pattern, the API gateway is responsible for converting the internal model
+into the integratino optimized published language. This can alleviate the process of managing and serving multiple
+versions of the bounded context's API.
+
+AntiCorruption Layers implemented using an API Gateway can be consumed by multiple downstream bounded contexts.
+
+*** Asynchronous
+
+To translate models used in asynchronous communication, you can implement a /message proxy/, an intermediary component
+subscribing to messages coming from the souce bounded context. It will aplly the required model transformations and
+forward the resultant messages to the target subscriber.
+
+In addition to translating the messages, the proxy can also reduce noise by filtering out irrevelant messages.
+
+Open-Host services are a good example of when to use this, so neither the upstream nor the downstream context need to send/
+receive a published language. The published language can exist only in the OHS, working as a translation proxy.
+
+** Stateful Model Transaction
+
+For more complex model transformations, for example, when the translation mechanism has to aggregate the source data or unify
+data from multiple sources into a single model, a stateful translation may be required.
+
+*** Aggregating incoming data
+
+Two examples of these are:
+
++ Creating batches of requests to be processed together, instead of separately.
++ Combining multiple requests in a single message with all data.
+
+
+Model transformation that aggregates incoming data cannot be implemented using an API gateway, and thus, requires more elaborate,
+stateful processing.
+
+In some use cases, you can avoid implementing a custom solution for a translation by using off-the-shelf producst, such as a stream-
+process platform, or a batching solution.
+
+*** Unifying multiple sources
+
+A bounded context may need to process data aggregates from multiple sources, including other bounded contexts.
+
+A typical example is a BFF, in which the user interface has to combine data originating from multiple services.
+
+Another example is a bounded context that must process data from multiple other contexts and implement complex business logic to
+process all the data.
+
+In this case, it can be beneficial to decouple the integration and business logic complexities by fronting the bounded context with an
+AntiCorruption Layer that aggregates data from all other bounded contexts.
+
+* Integrating Aggregates
+
+You cannot publish the event without being certain that the state is persisted in the database, without needing to worry about things
+such as inconsistency between the events and the database event.
+
+Also, sending the event after committing to the database is a bad idea, since if the code fails to send the event, this will also lead to
+an inconsistent state.
+
+** Outbox
+
+The outbox pattern ensures reliable publishing of domain events using the following algorithm:
+
++ Both the updated aggregate's state and the new domain events are committed in the same atomic transaction.
++ A message relay fetches newly committed domain events from the database.
++ The relay publishes the domain events to the message bus.
++ Upon successful publishing, the relay either marks the events as published in the database, or deletes them completely.
+
+When using a relational database, it's convenient to leverage the database's ability to commit to two tables atomically and use a dedicated
+table for storing the messages.
+
+When using a NoSQL database, that doesn't support multidocument transactions, the outgoing domain events have to be embedded in the aggregate's
+record.
+
+*** Fetching unpublished events
+
+The publishing relay can fetch the new domain events in either a pull-based or push-based manner:
++ /Pull: polling publisher./ The relay can continuously query the database for unpublished events.
++ /Push: transaction log tailing./ Here we can leverage the database's feature set to proactively call the publishing relay when new events are
+  appended.
+  - Some relational databases enable getting notifications about updated/inserted records by tailing the database's transaction log.
+  - Some NoSQL databases expose commited changes as streams of events.
+
+
+** Saga
+
+One of the core aggregate design principles is to limit each transaction to a single instance of an aggregate.
+
+This ensures that an aggregate's boundaries are carefully considered and encapsulate a coherent set of business functionality.
+
+But, there are cases when we have to implement a business process that spans multiple aggregates.
+
+A saga is a long-running business process. It's long running not necessarily in terms of time, as sagas can run from seconds to years, but rather
+in terms of transactions: a business process that spans multiple transactions.
+
+The transactions can be handled not only by aggregates but by any component emitting domain events and responding to commands.
+
+The saga listens to the events emitted by the relevant components and issues subsequent commands to the other components.
+
+If one of the execution steps fails, the saga is in charge of issuing relevant compensating actions to ensure the system state remains consistent.
+
+*** Consistency
+
+Although the saga pattern orchestrates a multicomponent transaction, the states of the involved components are eventually consistent.
+
+** Process Manager
+
+The saga patterm manages simple, linear flow.
+
+Strictly speaking a saga matches events to the corresponding commands.
+
+The process manager pattern is intendfed to implement a business-logic-based process.
+
+It is defined as a central processing unit that maintains the state of the sequence and determines the next processing steps.
+
+If the saga has if/else statements to choose the correct course of action, it is probably a process manager.
+
+Another difference is that a saga is instantiated as the events come and go, but a process manager is a coherent business process consisting
+of multiple steps, hence, has to be instantiated separately, as it cannot be bund to a single event.
+
+From an implementation perspective, process managers are often implemented as aggregates, either state based or event sourced.
+
+In a process manager, it has its explicit ID and persistent state, describing the process it is managing (e.g.: a trip to be booked)
