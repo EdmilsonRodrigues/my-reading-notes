@@ -1,0 +1,3 @@
+#+title: Data Generation, Conversion, and Manipulation
+#+author: Edmilson Monteiro Rodrigues Neto
+

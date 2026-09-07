@@ -1,0 +1,3 @@
+#+title: Query Primer
+#+author: Edmilson Monteiro Rodrigues Neto
+

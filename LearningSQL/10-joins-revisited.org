@@ -1,0 +1,3 @@
+#+title: Joins Revisited
+#+author: Edmilson Monteiro Rodrigues Neto
+
