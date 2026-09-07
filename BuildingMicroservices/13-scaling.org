@@ -1,0 +1,3 @@
+#+title: Scaling
+#+author: Edmilson Monteiro Rodrigues Neto
+
