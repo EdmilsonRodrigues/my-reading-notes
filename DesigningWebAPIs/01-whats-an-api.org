@@ -1,0 +1,24 @@
+#+title: What's an API
+#+author: Edmilson Monteiro Rodrigues Neto
+
+API => Application Programming Interface
+
+In fact, it is the interface a software presents to other programs, to humans, or, to the internet.
+
+APIs are building blocks that allow interoperability for major business platforms on the web.
+
+More and more, APIs are a key component of scalable and succesful internet companies, like Amazon, Stripe
+Google and facebook.
+
+* Why do we need APIs?
+
+APIs have emerged out of a need to exchange information with providers of data who are equipped to solve
+specific problems, so other people don't need to solve it themselves.
+
+* Who Are Our Users?
+
+The user of an API is a developer, someone who is integrating with it to create their own solution.
+
+* The Business Case for APIs
+
+

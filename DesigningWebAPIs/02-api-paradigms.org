@@ -1,0 +1,5 @@
+#+title: API Paradigms
+#+author: Edmilson Monteiro Rodrigues Neto
+
+
+
