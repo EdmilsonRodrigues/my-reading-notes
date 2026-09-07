@@ -1,0 +1,3 @@
+#+title: Encoding and Evolution
+#+author: Edmilson Monteiro Rodrigues Neto
+
