@@ -1,0 +1,580 @@
+#+title: An Awk Tutorial
+#+author: Edmilson Monteiro Rodrigues Neto
+
+* Getting Started
+
+Check on the file ni ./sinppets/emp.data.
+
+Suppose it contains the name, pay rate in dollars per hour, and number of hours worked for your employees.
+
+Now, suppose you want to print the name and pay for everyone who worked more than 0 hours.
+
+This is a perfect case for awk:
+
+#+BEGIN_SRC awk
+  $3 > 0 {
+      print $1, $2 * $3
+  }
+#+END_SRC
+
+
+This program consists on a pattern, that decides when the block should be executed, followed by a code block.
+
+Now, suppose we want to print the names of the employees who did not work.
+
+#+BEGIN_SRC awk
+  $3 == 0 {
+      print $1
+  }
+#+END_SRC
+
+** The structure of an AWK Program
+
+Each awk program is a sequence of one or more pattern-action statements
+
+pattern { action }
+pattern { action }
+...
+
+The basic operation of awk is to scan a sequence of input lines one after another, searching for lines that are matched
+by any of the patterns in the program.
+
+So, basically, for each line of the input, awk will test for all patterns, and execute the blocks for all patterns that match.
+
+Finally, it will go to the next line
+
+An example here of a command that gets all of them is like this:
+
+#+BEGIN_SRC awk
+  $3 == 0 {
+      print $1
+  }
+  $3 > 0 {
+      print $1, $2 * $3
+  }
+  $2 == 4.00 {
+      print $1, $2
+  }
+#+END_SRC
+
+This will print like:
+#+BEGIN_QUOTE
+Beth
+Beth 4.00
+Dan
+Kathy 40
+Kathy 4.00
+Mark 100
+Mary 121
+Susie 76.5
+#+END_QUOTE
+
+If the action is without any pattern it will be executed for all lines in the input.
+
+** Running an AWK Program
+
+It is usually ran like: /awk 'program' input files/ such as /awk '{print $1}' file1 file2/
+
+You can also pass a file with the program like /awk -f program.awk input files/
+
+** Errors
+
+If you make an error in an awk program, awk will give you a diagnosic message
+
+* Simple Output
+
+The rest of this chapter is only useful snippets to learn the behaviour of awk
+
+There are two types of data in awk: numbers and strings.
+
+The fields are called by their number, and $0 means the entire line
+
+The number of fields can vary from line to line
+
+** Printing Every Line
+
+If an action has no pattern, the action is performed for all input lines.
+
+The statement print by itself prints the current input line, so these 2 programs do the same:
+#+BEGIN_SRC awk
+  { print }
+  { print $0 }
+#+END_SRC
+
+** Printing Certain Fields
+
+More than one item can be printed on the same output line with a single print statement
+
+#+BEGIN_SRC awk
+  { print $1, $3 }
+#+END_SRC
+
+Expressions separated by a comma in a print statement are, by default, separated by a single blank when they are printed.
+
+Each line produced by print ends with a newline character.
+
+** NF, the number of Fields
+
+You can use any expression after a $, not only numbers. AWK counts the number of fields in the current input line and store the
+count in the variable NF.
+
+#+BEGIN_SRC awk
+  { print NF $1, $NF }
+#+END_SRC
+
+This program prints the number of fields and first and last field of each line.
+
+** Computing and printing
+
+You can do computations on the field values and included the results in what is printed.
+
+#+BEGIN_SRC awk
+  { print $1, $2 * $3 }
+#+END_SRC
+
+This is a typical example
+
+** Printing Line Numbers
+
+Awk provides another built-in variable, NR, that counts the number of lines read so far.
+
+So, the following program will print the output with the line number
+
+#+BEGIN_SRC awk
+  { print NR, $0 }
+#+END_SRC
+
+** Putting Text in the Output
+
+You can also print words in the midst of fields and computed values:
+
+#+BEGIN_SRC awk
+  { print "total pay for", $1, "is", $2 * $3 }
+#+END_SRC
+
+* Fancier Output
+
+The /print/ statement is meant for quick and easy output.
+
+To format the output exactly the way you want it, you may have to use the printf statement
+
+** Lining up fields
+
+The printf statement has the form /printf(format, value1, value2, ..., valueN)/
+
+Where format is a string that contains text to be printed verbatim, interspersed with specifications of how each
+of the values is to be printed.
+
+A specification is a % followed by a few characters that control the format of a value.
+
+#+BEGIN_SRC awk
+  { printf "total pay for %s is $.2f\n", $1, $2 * $3 }
+#+END_SRC
+
+With printf, no blanks or newlines are produced automatically.
+
+Here another program that prints each employee's name and pay:
+
+#+BEGIN_SRC awk
+  { printf "%-8s $%6.2f\n", $1, $2 * $3 }
+#+END_SRC
+
+** Sorting the Output
+
+Suppose you want to print all the data for each employee, along with his or her pay, sorted in order of increasing pay.
+
+The easiest way is to prefix the total pay and run that output through a sorting program
+
+#+BEGIN_SRC bash
+  awk '{ printf "%6.2f %s\n", $2 * $3, $0 }' ./snippets/emp.data | sort -n  # | tac # if you want in decreasing order
+#+END_SRC
+
+* Selection
+
+Awk patterns are good for selecting interesting lines from the input for further processing.
+
+A pattern without an action prints all lines matching the pattern. 
+
+** Selection by Comparison
+
+The following program will print the lines of who earns more than 5 dolars an hour
+
+#+BEGIN_SRC awk
+  $2 >= 5
+#+END_SRC
+
+** Selection by Computation
+
+The following program prints the pay of those employees whose total pay exceeds $50:
+
+#+BEGIN_SRC awk
+  $2 * $3 > 50 { printf "$.2f for %s\n", $2 * $3, $1}
+#+END_SRC
+
+
+** Selection by Text Content
+
+Besides numeric tests, you can select input lines that contain specific words or phrases:
+
+This program prints all lines in which the first field is Susie:
+
+#+BEGIN_SRC awk
+  $1 == "Susie"
+#+END_SRC
+
+Another possibility is to check for regular expressions:
+
+#+BEGIN_SRC awk
+  /Mar/
+#+END_SRC
+
+** Combination of patterns
+
+We can combine patterns using logical operators &&, ||or !
+
+Remember also that combining 2 patterns generate 1 pattern, so:
+
+#+BEGIN_SRC awk
+  $2 >= 4 || $3 >= 20
+#+END_SRC
+
+is differemt than
+
+#+BEGIN_SRC awk
+  $2 >= 4
+  $3 >= 20
+#+END_SRC
+
+Since the first will print lines that fullfill one or another, and the second there will be 2 checks, generating duplicated lines
+if more than one is fullfilled
+
+** Data Validation
+
+There are always errors in real data.
+
+Awk is an excellent tool for checking that data has reasonable values and is in the right format, a task that is often called
+data validation.
+
+Data validation is essentially negative:
+instead of printing lines with desirable properties, one prints lines that are suspicious.
+
+This is a program to check some plausibility tests for the emp.data snippet:
+
+#+BEGIN_SRC awk
+  NF != 3 { print $0, "Number of fields is not equal to 3" }
+  $2 < 3.35 { print $0, "rate is below minimum wage" }
+  $2 > 10 { print $0, "rate exceeds $10 per hour" }
+  $3 < 0 { print $0, "Negative hous worked" }
+  $3 > 60 { print $0, "too many hours worked" }
+#+END_SRC
+
+If there are no errors, there's no output
+
+** BEGIN and END
+
+The special pattern BEGIN matches before the first line of the first input file is read
+
+END matches after the last line of the last file has been processed.
+
+#+BEGIN_SRC awk
+  BEGIN { print "NAME    RATE    HOURS"; print "" }
+  {print}
+#+END_SRC
+
+* Computing with AWK
+
+An action is a sequence of statements separated by newlines or semicolons.
+
+You have already seen examples in which the action was a single print statement.
+
+This section provides examples of statements for performing simple numeric and string computations.
+
+In these statements you can create your own variables for performing calculations, storing data, etc.
+
+** Counting
+
+This program uses a variable emp to count employees who have worked more than 15 hours.
+
+#+BEGIN_SRC awk
+  $3 > 15 {
+      emp = emp + 1
+  }
+  END {
+      print emp, "employees worked more than 15 hours"
+  }
+#+END_SRC
+
+Awk variables used as numbers begin life with the value 0, so we do not need to initialize them.
+
+** Computing Sums and Averages
+
+Here a program to calculate the average pay of employees
+
+#+BEGIN_SRC awk
+  { pay = pay + $2 * $3 }
+  END {
+      print NR "employees"
+      print "total pay is", pay
+      print "average pay is", pay/NR
+  }
+#+END_SRC
+
+** Handling Text
+
+One of the strengths of awk if its ability to handle strings as well as numbers.
+
+This program finds the employee who is pais most per hour
+
+#+BEGIN_SRC awk
+  $2 > maxrate { maxrate = $2; maxemp = $1 }
+  END { print "Highest hourly rate:", maxrate, "for", maxemp }
+#+END_SRC
+
+** String Concatenation
+
+New strings can be created by concatenating old ones:
+
+#+BEGIN_SRC awk
+  { names = names $1 " " }
+  END { print names }
+#+END_SRC
+
+Variables used to store strings begin life holding the null string ""
+
+** Printing the last input line
+
+Although NR retains its value, $0 does not.
+
+#+BEGIN_SRC awk
+  { last = $0 }
+  END { print last }
+#+END_SRC
+
+** Built in functions
+
+Besides built in variables such as NR and NF, there are built in functions, such as print, printf and length
+
+length counts the numbers of characters in a string.
+
+#+BEGIN_SRC awk
+  { print $1, length($1) }
+#+END_SRC
+
+If called by itself, length gets the total number of characters in $0
+
+** Counting Lines, Words, and Characters
+
+like wc but written in awk
+
+#+BEGIN_SRC awk
+  {
+      nc = nc + length + 1
+      nw = nw + NF
+  }
+  END {
+      print NR, "lines,", nw, "words,", nc, "characters"
+  }
+#+END_SRC
+
+The +1 is for the \n in the end of each line
+
+* Control Flow Statements
+
+Awk provides also statements for making decisions, looping, and control flow in general
+
+** If-Else Statement
+
+This following program computes the total and average pay of employees making more than $6.00 an hour.
+
+#+BEGIN_SRC awk
+  $2 > 6 {
+      n = n + 1
+      total = total + $2 * $3
+  }
+  END {
+      if (n == 0) {
+          print "no employees are paid more than $6/hour"
+      } else {
+          print n, "employees are paid more than $6/hour."
+          print "The total is %.2f", total
+          print "The average is " pay
+      }
+  }
+#+END_SRC
+
+** While Statement
+
+A while statement has a condition and a body. The Statements in the body are performed repeatedly while the
+condition is true.
+
+See this program for computing the growth of an investiment throughout the years
+
+#+BEGIN_SRC awk
+  # Interest 1 => Compute compound interest
+  # input: amount of rate years
+  # output: compounded value at tje emd pf each year
+  {
+      i = 1
+      while (i <= $3) {
+          printf "\t%.2f\n", $1 * (1 + $2) ^ i
+          i = i + 1
+      }
+  }
+#+END_SRC
+
+The ^ is the exponentiation operator.
+
+Text starting with a # are comments and are not interpreted
+
+** For statement
+
+#+BEGIN_SRC awk
+  # interest2 - compute compound interest
+  #     input: amount rate years
+  #     output: compounded value at th end of each year
+  {
+      for (i = 1; i <= $3; i++) {
+          printf "\t%.2f\n", $1 * (1 + $2) ^ i
+      }
+  }
+#+END_SRC
+
+The initialization, check and increment happen all in the for header.
+
+* Arrays
+
+Awk provides arrays (actually maps) for storing groups of related values.
+
+Let's see now a tac made in awk:
+
+#+BEGIN_SRC awk
+  { line[NR] = $0 }
+  END {
+      i = NR
+      while (i > 0) {
+          print line[i]
+          i--
+      }
+  }
+#+END_SRC
+
+And the same with a for:
+
+#+BEGIN_SRC awk
+  { line[NR] = $0 }
+  END {
+      for (i = NR; i > 0; i--) {
+          print line[i]
+      }
+  }
+#+END_SRC
+
+* A Hanful of Useful "One-Liners"
+
+Although awk can be used to write programs of some complexity, many useful programs are not much more
+complicated than 1 or 2 lines of what we've seen
+
+1. Print the total number of input lines:
+  #+BEGIN_SRC awk
+    END { print NR }
+  #+END_SRC
+2. Print the tenth input line:
+  #+BEGIN_SRC awk
+    NR == 10
+  #+END_SRC
+3. Print the last field of every input line:
+  #+BEGIN_SRC awk
+    { print $NF }
+  #+END_SRC
+4. Print the last field of the last input line:
+  #+BEGIN_SRC awk
+    {field = $NF}
+    END {print field}
+  #+END_SRC
+5. Print every input line with more than four fields:
+  #+BEGIN_SRC awk
+    NF > 4
+  #+END_SRC
+6. Print every input line in which the last field is more then 4:  
+  #+BEGIN_SRC awk
+    $NF > 4
+  #+END_SRC
+7. Print the total number of fields in all input lines: 
+  #+BEGIN_SRC awk
+    {nf = nf + NF}
+    END {print nf}
+  #+END_SRC
+8. Print the total  number of lines that contain Beth
+  #+BEGIN_SRC awk
+    /Beth/ {nlines = nlines + 1}
+    END {print nlines}
+  #+END_SRC
+9. Print the largest first field and the line that contains it
+  #+BEGIN_SRC awk
+    $1 > max {max = $1; maxline = $0}
+    END {PRINT max, maxline }
+  #+END_SRC
+10. Print every line that has at least one field:
+   #+BEGIN_SRC awk
+     NF > 0
+   #+END_SRC
+11. Print every line longer than 80 characters:
+   #+BEGIN_SRC awk
+     length > 80
+   #+END_SRC
+12. Print the number of fields in every line followed by the line itself:
+   #+BEGIN_SRC awk
+     {print NF, $0}
+   #+END_SRC
+13. Print the first two fields, in opposite order, of every line:
+   #+BEGIN_SRC awk
+     {print $2, $1}
+   #+END_SRC
+14. Exchange the first two fields of every line and then print the line:   
+   #+BEGIN_SRC awk
+     {temp = $1; $1 = $2; $2 = temp; print}
+   #+END_SRC
+15. Print every line with the first field replaced by the line number:
+   #+BEGIN_SRC awk
+     {$1 = NR; print}
+   #+END_SRC
+16. Print every line after erasing the second field:
+   #+BEGIN_SRC awk
+     { $2 = ""; print }
+   #+END_SRC
+17. Print in reverse order the fields of every line:
+   #+BEGIN_SRC awk
+     {
+         for (i = NF; i > 0; i++) {
+             printf "%s" $i
+             printf "\n"
+         }
+     }
+   #+END_SRC
+18. Print the sums of the fields of every line
+   #+BEGIN_SRC awk
+     {
+         for (i = 1; i <= NF; i++) sum = sum + $1
+         print sum
+     }
+   #+END_SRC
+19. Add up all fields in all lines and print the sum:
+   #+BEGIN_SRC awk
+     { for (i = 1; i <= NF; i++) sum = sum + $1 }
+     END { print sum }
+   #+END_SRC
+20. Print every line after replacing each field by its absolute value
+   #+BEGIN_SRC awk
+     {
+         for (i = 1; i <= NF; i++) if ($i < 0) $i = -$i
+         print
+     }
+   #+END_SRC
+   #+BEGIN_SRC awk
+   #+END_SRC
+
+* What Next?
+
+This is all the basics of the language
+
+The rest of the book is elaborating in these principles.

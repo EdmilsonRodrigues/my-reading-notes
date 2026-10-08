@@ -1,0 +1,8 @@
+#+title: Data Processing
+#+author: Edmilson Monteiro Rodrigues Neto
+
+As it is easier to modify an existing awk program than creating one from scratch, here are some useful
+awk programs so you can alter later.
+
+* Data Transformation and Reduction
+
